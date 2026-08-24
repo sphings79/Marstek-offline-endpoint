@@ -1,0 +1,18 @@
+services:
+  marstek-offline-endpoint:
+    # Prebuilt image (amd64 / arm64 / armv7 — works on a Raspberry Pi):
+    image: ghcr.io/sphings79/marstek-offline-endpoint:latest
+    # Or build it yourself:
+    # build: .
+    container_name: marstek-offline-endpoint
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./data:/data      # one JSONL per day: everything the device sent
+      - ./certs:/certs    # self-signed certificate, generated on first start
+    environment:
+      # Answer every request with {"code":0}, not just the telemetry upload.
+      # Off by default — see README before switching this on.
+      - ACCEPT_ALL=0
