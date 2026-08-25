@@ -109,23 +109,29 @@ means you now have your own telemetry, locally.
 ## The clock, and reading what your battery sent
 
 The device polls a time endpoint every ~20 seconds. This container answers it,
-so the battery sets its real-time clock from your Pi instead of from the cloud —
-and the polling stops. The format comes from
-`HTTP_ParseServerDateTime_UpdateRTC`, which looks for an underscore and then
-reads fixed offsets:
+so the battery sets its real-time clock from your machine instead of from a
+cloud it cannot reach.
+
+The reply is byte-for-byte what the real endpoint returns:
 
 ```
-_YYYY-MM-DD hh:mm:ss
+_2026_08_25_07_24_29_04_0_0_0
 ```
 
-Set the timezone you want the battery to run on:
+`HTTP_ParseServerDateTime_UpdateRTC` finds the underscore and reads fixed
+offsets from it — year, month, day, hour, minute, second — ignoring the
+separators. The four trailing fields stay constant while the time advances, so
+they are parameters rather than time values; they are mirrored verbatim rather
+than invented, because the firmware reads something from that region
+(`HexChar_To_TimeOffsetIndex`) and guessing there would be reckless. Override
+with `TIME_SUFFIX` if you ever learn what they mean.
 
-```
-docker run … -e TZ=Europe/Berlin ghcr.io/sphings79/marstek-offline-endpoint:latest
-```
+**The real server answers in UTC**, and so does this one. Set `TIME_LOCAL=1` if
+you would rather have the battery's clock — and any schedules it runs — on your
+wall-clock time. `TZ` then selects which one that is.
 
-Turn it off with `ANSWER_TIME=0` if you would rather not have the container
-setting your device's clock.
+Turn the whole thing off with `ANSWER_TIME=0` if you would rather not have the
+container setting your device's clock.
 
 Console lines carry local wall-clock time (whatever `TZ` says), so they line up
 with your other logs. The JSONL keeps ISO-8601 UTC, which stays unambiguous for
@@ -191,7 +197,9 @@ Set `MQTT_PORT=0` to switch it off.
 |---|---|---|
 | `ACCEPT_ALL` | `0` | answer every path with `{"code":0}` |
 | `ANSWER_TIME` | `1` | answer the time endpoint (sets the device's clock) |
-| `TZ` | `UTC` | timezone the clock is served in, e.g. `Europe/Berlin` |
+| `TIME_LOCAL` | `0` | serve local time instead of UTC (the real server sends UTC) |
+| `TIME_SUFFIX` | `04_0_0_0` | trailing fields of the time reply, copied from the real endpoint |
+| `TZ` | `UTC` | which local time `TIME_LOCAL=1` means, e.g. `Europe/Berlin` |
 | `HTTPS_PORT` | `443` | |
 | `HTTP_PORT` | `80` | plain-http hamedata endpoints, logged only |
 | `MQTT_PORT` | `8883` | MQTT connection probe, log only; `0` disables |

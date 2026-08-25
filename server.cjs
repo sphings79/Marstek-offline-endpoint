@@ -13,14 +13,21 @@
  *   - a response body containing  "code":0   (FUN_0801774c: strstr + atoi)
  * Anything else about the response is not inspected.
  *
- * It also polls a time endpoint every ~20 s. HTTP_ParseServerDateTime_UpdateRTC
- * looks for an underscore and then reads fixed offsets from it:
+ * It also polls a time endpoint every ~20 s. The real cloud answers it like this
+ * (captured 2026-08-25 from eu.hamedata.com, Content-Type text/html):
  *
- *     _YYYY-MM-DD hh:mm:ss
- *      1234 67 90 23 56 89     <- offsets from the underscore
+ *     _2026_08_25_07_23_25_04_0_0_0
+ *      ^^^^ ^^ ^^ ^^ ^^ ^^ ^^^^^^^^
+ *      year mo dy hh mm ss  constant across calls
  *
- * The separators are not checked, only the positions. Answering it sets the
- * device's real-time clock and stops the polling.
+ * HTTP_ParseServerDateTime_UpdateRTC finds the underscore and reads fixed
+ * offsets from it; the separators themselves are not checked. The four trailing
+ * fields do not change while the time does, so they are parameters rather than
+ * time values — most likely what HexChar_To_TimeOffsetIndex() reads, which
+ * decides whether the device arms a timer or takes an immediate path. They are
+ * mirrored verbatim rather than invented.
+ *
+ * The real server answers in UTC, so this one does too by default.
  *
  * Node core modules only — no dependencies to audit.
  */
@@ -102,15 +109,24 @@ function stamp(now = new Date()) {
   );
 }
 
-/** Local time in the format HTTP_ParseServerDateTime_UpdateRTC expects. */
+// Trailing fields, copied from a real cloud response. Constant across calls, and
+// what they mean is unknown — so they are mirrored rather than guessed at.
+const TIME_SUFFIX = process.env.TIME_SUFFIX ?? '04_0_0_0';
+
+// The real server answers in UTC. Set TIME_LOCAL=1 to serve this machine's local
+// time instead, if you would rather have the battery's clock and its schedules
+// run on wall-clock time.
+const TIME_LOCAL = process.env.TIME_LOCAL === '1';
+
+/** The time string in exactly the shape the real endpoint returns. */
 function timeResponse(now = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
-  // Local time of this container — set TZ (e.g. TZ=Europe/Berlin) to match the
-  // clock you want the battery to run on.
-  return (
-    `_${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ` +
-    `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`
-  );
+  const [y, mo, d, h, mi, s] = TIME_LOCAL
+    ? [now.getFullYear(), now.getMonth() + 1, now.getDate(),
+       now.getHours(), now.getMinutes(), now.getSeconds()]
+    : [now.getUTCFullYear(), now.getUTCMonth() + 1, now.getUTCDate(),
+       now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds()];
+  return `_${y}_${p(mo)}_${p(d)}_${p(h)}_${p(mi)}_${p(s)}_${TIME_SUFFIX}`;
 }
 
 fs.mkdirSync(LOG_DIR, { recursive: true });
@@ -175,13 +191,16 @@ function handle(scheme) {
       if (isTime) {
         const payload = Buffer.from(timeResponse());
         res.writeHead(200, {
-          'Content-Type': 'text/plain',
+          // What the real endpoint sends.
+          'Content-Type': 'text/html; charset=utf-8',
           'Content-Length': payload.length,
         });
         res.end(payload);
       } else if (accept) {
-        // "code":0 is what FUN_0801774c looks for. Nothing else is parsed.
-        const payload = Buffer.from('{"code":0,"msg":"ok"}');
+        // "code":0 is what FUN_0801774c looks for. The shape mirrors the real
+        // endpoint, which answers e.g. {"code":51,"message":"...","data":null}
+        // when a request is rejected.
+        const payload = Buffer.from('{"code":0,"message":"success","data":null}');
         res.writeHead(200, {
           'Content-Type': 'application/json',
           'Content-Length': payload.length,
