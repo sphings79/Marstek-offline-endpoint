@@ -127,6 +127,10 @@ docker run … -e TZ=Europe/Berlin ghcr.io/sphings79/marstek-offline-endpoint:la
 Turn it off with `ANSWER_TIME=0` if you would rather not have the container
 setting your device's clock.
 
+Console lines carry local wall-clock time (whatever `TZ` says), so they line up
+with your other logs. The JSONL keeps ISO-8601 UTC, which stays unambiguous for
+machines — do not compare the two by eye without accounting for the offset.
+
 Everything the device uploads lands in `data/requests-YYYY-MM-DD.jsonl`. To read
 it:
 

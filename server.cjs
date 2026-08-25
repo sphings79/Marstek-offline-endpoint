@@ -50,6 +50,16 @@ const ACCEPT_ALL = process.env.ACCEPT_ALL === '1';
 const ANSWER_TIME = process.env.ANSWER_TIME !== '0';
 const TIME_PATH = /\/getDateInfo/;
 
+/** Local wall-clock stamp for the console, so it lines up with the rest of your
+ *  logs. The JSONL keeps ISO-8601 UTC, which stays unambiguous for machines. */
+function stamp(now = new Date()) {
+  const p = (n) => String(n).padStart(2, '0');
+  return (
+    `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ` +
+    `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`
+  );
+}
+
 /** Local time in the format HTTP_ParseServerDateTime_UpdateRTC expects. */
 function timeResponse(now = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
@@ -115,7 +125,7 @@ function handle(scheme) {
 
       const tag = isTime ? 'TIME  ' : accept ? 'ACCEPT' : 'log   ';
       console.log(
-        `${new Date().toISOString()} ${tag} ${scheme} ${req.method} ` +
+        `${stamp()} ${tag} ${scheme} ${req.method} ` +
           `${req.headers.host || '-'}${req.url} from ${req.socket.remoteAddress} ` +
           `(${size} B)`
       );
