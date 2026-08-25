@@ -36,6 +36,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const net = require('net');
+const crypto = require('crypto');
 const https = require('https');
 
 const HTTPS_PORT = Number(process.env.HTTPS_PORT || 443);
@@ -121,6 +122,53 @@ const PROXY_TIME_HOST = process.env.PROXY_TIME_HOST || 'eu.hamedata.com';
 const PROXY_TIME_PORT = Number(process.env.PROXY_TIME_PORT || 80);
 const PROXY_TIME_MS = Number(process.env.PROXY_TIME_MS || 8000);
 
+
+/** Build a reply byte for byte the way the real endpoint does.
+ *
+ *  Captured from eu.hamedata.com on 2026-08-25, proxied through this container:
+ *
+ *    HTTP/1.1 200 OK\r\n
+ *    Date: Tue, 25 Aug 2026 20:05:42 GMT\r\n
+ *    Content-Type: text/html; charset=utf-8\r\n
+ *    Transfer-Encoding: chunked\r\n
+ *    Connection: keep-alive\r\n
+ *    Trace-Id: 1439e17e1325cf18e7cffa2adba9ea8d\r\n
+ *    \r\n
+ *    1d\r\n_2026_08_25_22_05_42_04_0_0_0\r\n0\r\n\r\n
+ *
+ *  This is assembled by hand instead of through res.writeHead/res.end because
+ *  Node adds "Keep-Alive: timeout=5", which the real endpoint does not send, and
+ *  orders the headers differently. With Node's framing the device retried four
+ *  times and gave up; proxying the genuine answer through, it accepted on the
+ *  first try. Rather than guess which detail mattered, this reproduces all of
+ *  them. Measured, not assumed -- do not "simplify" it back to res.end().
+ */
+function rawReply(contentType, body) {
+  const b = Buffer.from(body, 'latin1');
+  const head =
+    'HTTP/1.1 200 OK\r\n' +
+    `Date: ${new Date().toUTCString()}\r\n` +
+    `Content-Type: ${contentType}\r\n` +
+    'Transfer-Encoding: chunked\r\n' +
+    'Connection: keep-alive\r\n' +
+    `Trace-Id: ${crypto.randomBytes(16).toString('hex')}\r\n` +
+    '\r\n';
+  return Buffer.concat([
+    Buffer.from(head, 'latin1'),
+    Buffer.from(`${b.length.toString(16)}\r\n`, 'latin1'),
+    b,
+    Buffer.from('\r\n0\r\n\r\n', 'latin1'),
+  ]);
+}
+
+/** Write a raw reply and clean the socket up afterwards. The real endpoint
+ *  answers keep-alive and leaves the connection standing, so this does too --
+ *  it just does not leak it. */
+function sendRaw(res, buf) {
+  res.socket.write(buf);
+  setTimeout(() => res.socket && res.socket.destroy(), 6000);
+}
+
 /** Fetch the time endpoint upstream over plain HTTP and hand back the raw
  *  bytes. Deliberately a bare socket: an http.request would re-encode the
  *  response and destroy the very detail under investigation. */
@@ -179,10 +227,19 @@ function stamp(now = new Date()) {
 // what they mean is unknown — so they are mirrored rather than guessed at.
 const TIME_SUFFIX = process.env.TIME_SUFFIX ?? '04_0_0_0';
 
-// The real server answers in UTC. Set TIME_LOCAL=1 to serve this machine's local
-// time instead, if you would rather have the battery's clock and its schedules
-// run on wall-clock time.
-const TIME_LOCAL = process.env.TIME_LOCAL === '1';
+// The real server answers in the device's LOCAL time, not UTC. Measured
+// 2026-08-25 by proxying a genuine reply through this container: its Date header
+// read "Tue, 25 Aug 2026 20:05:42 GMT" while the body read
+// _2026_08_25_22_05_42_04_0_0_0 -- two hours ahead, i.e. CEST.
+//
+// An earlier capture appeared to be UTC, but that request went out with a
+// made-up uid; the service most likely did not know which device, and therefore
+// which timezone, was asking. With the real uid it answers local time.
+//
+// So local is the default. Set TZ for the container (e.g. TZ=Europe/Berlin) --
+// without it the container's local time IS UTC and you gain nothing. Set
+// TIME_LOCAL=0 to force UTC.
+const TIME_LOCAL = process.env.TIME_LOCAL !== '0';
 
 /** The time string in exactly the shape the real endpoint returns. */
 function timeResponse(now = new Date()) {
@@ -292,32 +349,23 @@ function handle(scheme) {
       }
 
       if (isTime) {
-        // Framing matters here, and it is copied from a raw capture of the real
-        // endpoint (2026-08-25). It answers chunked, with keep-alive and no
-        // Content-Length, so the response ends with the terminating chunk
-        // "0\r\n\r\n".
-        //
-        // That trailing CRLF is the point. HTTPS_POST_ReceiveResponseData
-        // (0x08015744) only leaves its receive loop early when data has
-        // arrived, 21 consecutive polls came back empty, AND the last two bytes
-        // in the buffer are CR LF. With a Content-Length reply ending in "0"
-        // the loop never exited early: it sat out the full timeout that
-        // Cloud_Report_URL_Builder(1, 0x14) passes -- 20 s -- and the firmware
-        // gave up after four tries, so the clock was never set.
-        //
-        // Omitting Content-Length is what makes Node chunk it. Do not "fix"
-        // that by adding the header back.
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(timeResponse());
+        // Byte-for-byte as the real endpoint answers -- see rawReply().
+        sendRaw(res, rawReply('text/html; charset=utf-8', timeResponse()));
       } else if (accept) {
         // "code":0 is what FUN_0801774c looks for. The shape mirrors the real
         // endpoint, which answers e.g. {"code":51,"message":"...","data":null}
         // when a request is rejected.
-        // Chunked for the same reason as the time reply -- see above. The
-        // upload host was not captured raw, so this mirrors the framing that is
-        // known to work rather than inventing a second variant.
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end('{"code":0,"message":"success","data":null}');
+        //
+        // The framing is the same as the time reply. That part is an
+        // extrapolation: the upload host was never captured raw, so this
+        // assumes it is served by the same stack as eu.hamedata.com. It does
+        // share the receive path in firmware (HTTPS_POST_ReceiveResponseData),
+        // which is what made the time reply fail, so matching it is the better
+        // guess -- but it is a guess.
+        sendRaw(
+          res,
+          rawReply('application/json', '{"code":0,"message":"success","data":null}')
+        );
       } else {
         // Headers alone already end with CRLF CRLF, so the receive loop is
         // satisfied without a body.

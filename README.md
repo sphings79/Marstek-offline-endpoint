@@ -126,9 +126,18 @@ than invented, because the firmware reads something from that region
 (`HexChar_To_TimeOffsetIndex`) and guessing there would be reckless. Override
 with `TIME_SUFFIX` if you ever learn what they mean.
 
-**The real server answers in UTC**, and so does this one. Set `TIME_LOCAL=1` if
-you would rather have the battery's clock — and any schedules it runs — on your
-wall-clock time. `TZ` then selects which one that is.
+**The real server answers in the device's local time**, and so does this one.
+Measured on 2026-08-25 by proxying a genuine reply through this container: its
+`Date` header read `20:05:42 GMT` while the body read `_2026_08_25_22_05_42_…`
+— two hours ahead, CEST.
+
+So **set `TZ`** (e.g. `TZ=Europe/Berlin`). Without it the container's local time
+is UTC and your battery's clock will sit an hour or two off, which also shifts
+any schedule it runs. `TIME_LOCAL=0` forces UTC if you want it.
+
+An earlier capture looked like UTC, but that request carried a made-up `uid`;
+the service most likely could not tell which device — and so which timezone —
+was asking.
 
 Turn the whole thing off with `ANSWER_TIME=0` if you would rather not have the
 container setting your device's clock.
@@ -197,9 +206,9 @@ Set `MQTT_PORT=0` to switch it off.
 |---|---|---|
 | `ACCEPT_ALL` | `0` | answer every path with `{"code":0}` |
 | `ANSWER_TIME` | `1` | answer the time endpoint (sets the device's clock) |
-| `TIME_LOCAL` | `0` | serve local time instead of UTC (the real server sends UTC) |
+| `TIME_LOCAL` | `1` | serve local time, as the real server does; `0` forces UTC |
 | `TIME_SUFFIX` | `04_0_0_0` | trailing fields of the time reply, copied from the real endpoint |
-| `TZ` | `UTC` | which local time `TIME_LOCAL=1` means, e.g. `Europe/Berlin` |
+| `TZ` | `UTC` | **set this** — which local time the reply uses, e.g. `Europe/Berlin` |
 | `HTTPS_PORT` | `443` | |
 | `HTTP_PORT` | `80` | plain-http hamedata endpoints, logged only |
 | `MQTT_PORT` | `8883` | MQTT connection probe, log only; `0` disables |
@@ -292,9 +301,17 @@ then confirmed against a real Venus D on firmware 150 over LAN:
   `{"code":0,"message":"success","data":null}`. The firmware's own check
   (`FUN_0801774c`: `strstr` for `"code":`, then `atoi` on the next byte) evaluates
   that to 0 — accepted — and the device stops retrying the record.
-- The time reply is byte-identical in shape to the real endpoint's. Both were
-  queried in the same second and compared:
-  `_2026_08_25_07_23_25_04_0_0_0`, in UTC.
+- The time reply is byte-identical to the real endpoint's — not merely similar.
+  A genuine reply was captured by proxying one through this container, and the
+  reply this container builds was diffed against it: same 232 bytes, same
+  headers in the same order, same chunked framing. Only `Date`, `Trace-Id` and
+  the timestamp differ, as they must.
+
+  This matters more than it sounds. A reply assembled by Node instead — same
+  body, same chunked encoding, but with `Keep-Alive: timeout=5` added and the
+  headers in a different order — was **rejected**: the device retried four times
+  at 20 s intervals and gave up without setting its clock. Which of those
+  details it objects to is not established; this reproduces all of them.
 - The region actually used by the device (`eu`) was observed on the wire rather
   than assumed.
 - TLS 1.0, 1.1 and 1.2 handshakes all succeed; the device presents no client
