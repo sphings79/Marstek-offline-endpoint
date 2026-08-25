@@ -190,37 +190,36 @@ function handle(scheme) {
       );
 
       if (isTime) {
-        // The trailing CRLF is not decoration. HTTPS_POST_ReceiveResponseData
-        // (0x08015744) only leaves its receive loop early when the last two
-        // bytes in the buffer are \r\n -- otherwise it sits out the full
-        // timeout passed by Cloud_Report_URL_Builder(1, 0x14), i.e. 20 s, and
-        // the firmware retries four times before giving up.
-        const payload = Buffer.from(timeResponse() + '\r\n');
-        res.writeHead(200, {
-          // What the real endpoint sends.
-          'Content-Type': 'text/html; charset=utf-8',
-          'Content-Length': payload.length,
-          // The device's HTTP client does not return until the connection is
-          // closed: with Node's default keep-alive it sat out the full 20 s
-          // timeout from Cloud_Report_URL_Builder(1, 0x14) and retried four
-          // times. Measured 2026-08-25 -- see README, "Keep it running".
-          Connection: 'close',
-        });
-        res.end(payload);
+        // Framing matters here, and it is copied from a raw capture of the real
+        // endpoint (2026-08-25). It answers chunked, with keep-alive and no
+        // Content-Length, so the response ends with the terminating chunk
+        // "0\r\n\r\n".
+        //
+        // That trailing CRLF is the point. HTTPS_POST_ReceiveResponseData
+        // (0x08015744) only leaves its receive loop early when data has
+        // arrived, 21 consecutive polls came back empty, AND the last two bytes
+        // in the buffer are CR LF. With a Content-Length reply ending in "0"
+        // the loop never exited early: it sat out the full timeout that
+        // Cloud_Report_URL_Builder(1, 0x14) passes -- 20 s -- and the firmware
+        // gave up after four tries, so the clock was never set.
+        //
+        // Omitting Content-Length is what makes Node chunk it. Do not "fix"
+        // that by adding the header back.
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(timeResponse());
       } else if (accept) {
         // "code":0 is what FUN_0801774c looks for. The shape mirrors the real
         // endpoint, which answers e.g. {"code":51,"message":"...","data":null}
         // when a request is rejected.
-        // Same CRLF requirement as the time reply -- see the comment above.
-        const payload = Buffer.from('{"code":0,"message":"success","data":null}\r\n');
-        res.writeHead(200, {
-          'Content-Type': 'application/json',
-          'Content-Length': payload.length,
-          Connection: 'close',
-        });
-        res.end(payload);
+        // Chunked for the same reason as the time reply -- see above. The
+        // upload host was not captured raw, so this mirrors the framing that is
+        // known to work rather than inventing a second variant.
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end('{"code":0,"message":"success","data":null}');
       } else {
-        res.writeHead(404, { 'Content-Length': 0, Connection: 'close' });
+        // Headers alone already end with CRLF CRLF, so the receive loop is
+        // satisfied without a body.
+        res.writeHead(404, { 'Content-Length': 0 });
         res.end();
       }
     });
