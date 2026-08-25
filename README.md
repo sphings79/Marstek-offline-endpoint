@@ -210,36 +210,35 @@ Set `MQTT_PORT=0` to switch it off.
 ## Keep it running — this matters more than it looks
 
 The battery keeps unsent telemetry in a ring buffer and counts the records in it.
-A record is added roughly every one to three minutes. One record is removed only
-when an upload is answered with `"code":0`.
+A record is added every five minutes. Records are removed only when an upload is
+answered with `"code":0`.
 
-If **more than one** record is ever left unconfirmed, the firmware concludes the
-network path is broken and resets the Ethernet bridge — every 1800 seconds, from
-then on. During each reset the device is gone from the network for two to three
-seconds: no Modbus, not even ICMP. That is the "every 30 minutes my battery drops
-off" report you will find in several places.
-
-The awkward part is in the decompiled control firmware (`FUN_08015bd0`, the HTTP
-task): an upload is only started when a new record requests one, and the request
-flag is cleared as soon as that upload succeeds. So exactly one record is removed
-per record added. **The counter can never drain — it can only rise, or stand
-still.** Once it is above one, it stays above one.
+If **more than one** record is left unconfirmed when a 1800-second timer expires,
+the firmware concludes the network path is broken and resets the Ethernet bridge.
+During each reset the device is gone from the network for two to three seconds:
+no Modbus, not even ICMP. That is the "every 30 minutes my battery drops off"
+report you will find in several places. Once the condition is met it tends to
+stay met, so the resets continue on a fixed ~1824-second cadence.
 
 Two things follow:
 
-- **A cold start clears it.** The counter lives in regular SRAM with no
-  persistence path, so it is zeroed on boot. If your device is already in the
-  30-minute cycle, power it off and on *after* this container is answering, and it
-  should stay out of it.
-- **Downtime here is not free.** If this container is unreachable long enough for
-  two records to go unconfirmed — roughly five minutes — the device drops into the
-  30-minute cycle and will not leave it until the next cold start. Answering the
-  upload reliably is the whole job. Use `--restart unless-stopped`, and if the host
-  reboots, check afterwards that the container came back.
+- **Downtime here is not free.** If this container is unreachable while records
+  pile up, the device can enter that cycle. Answering the upload reliably is the
+  whole job. Use `--restart unless-stopped`, and if the host reboots, check
+  afterwards that the container came back.
+- **A cold start is not a reliable cure.** The counter lives in regular SRAM with
+  no persistence path, so it is zeroed on boot — but on the author's device it
+  climbed back above the threshold within about 35 minutes and the cycle resumed.
+  Rebooting is worth trying; do not expect it to hold.
 
-None of this is a flaw introduced by running offline. The same thing happens
-whenever the real cloud is unreachable for a few minutes; a LAN endpoint simply
-fails less often than a WAN dependency.
+None of this is caused by running offline. The same thing happens whenever the
+real cloud is unreachable for long enough; a LAN endpoint simply fails less often
+than a WAN dependency.
+
+*Status: the reset mechanism itself is read out of the decompiled firmware and is
+solid. Why the buffer stays above the threshold on some devices and not others is
+still open — the firmware does have a drain path that should empty it. If you run
+this container, upload counts from your `/data` logs would genuinely help.*
 
 ## A warning worth reading
 
