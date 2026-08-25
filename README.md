@@ -312,6 +312,18 @@ then confirmed against a real Venus D on firmware 150 over LAN:
   headers in a different order — was **rejected**: the device retried four times
   at 20 s intervals and gave up without setting its clock. Which of those
   details it objects to is not established; this reproduces all of them.
+- The upload host's reply was captured raw too, by POSTing an empty body and
+  letting the gateway reject it. It sits behind Kong and adds seven headers the
+  time endpoint does not send (`vary`, `Access-Control-Allow-Credentials`, four
+  `X-Kong-*`/`Via` lines, `Strict-Transport-Security`). This container reproduces
+  them, in the same order — the two headers that separated a working time reply
+  from a rejected one looked just as inconsequential.
+- The real endpoint answers keep-alive and never closes, so the device waits out
+  its full 20 s receive timeout on every upload. That is normal, not a fault.
+  What does break things is cutting the connection while it is still waiting:
+  `mbedTLS_SSL_Recv_WithRetry` returns the error instead of the bytes, and the
+  caller stores that as a length. This container holds the connection for 25 s
+  and then ends it cleanly; it never destroys it.
 - The upload runs over TLS, and the firmware reads that response with a
   different loop than the plain-HTTP one: `mbedTLS_SSL_Recv_WithRetry`
   (`0x08015914`) has no CR LF condition at all. Its only early exit carrying data

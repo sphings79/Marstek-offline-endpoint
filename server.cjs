@@ -143,7 +143,7 @@ const PROXY_TIME_MS = Number(process.env.PROXY_TIME_MS || 8000);
  *  first try. Rather than guess which detail mattered, this reproduces all of
  *  them. Measured, not assumed -- do not "simplify" it back to res.end().
  */
-function rawReply(contentType, body) {
+function rawReply(contentType, body, extraHeaders = '') {
   const b = Buffer.from(body, 'latin1');
   const head =
     'HTTP/1.1 200 OK\r\n' +
@@ -152,6 +152,7 @@ function rawReply(contentType, body) {
     'Transfer-Encoding: chunked\r\n' +
     'Connection: keep-alive\r\n' +
     `Trace-Id: ${crypto.randomBytes(16).toString('hex')}\r\n` +
+    extraHeaders +
     '\r\n';
   return Buffer.concat([
     Buffer.from(head, 'latin1'),
@@ -159,6 +160,25 @@ function rawReply(contentType, body) {
     b,
     Buffer.from('\r\n0\r\n\r\n', 'latin1'),
   ]);
+}
+
+/** The upload host sits behind a Kong API gateway and adds these on top of the
+ *  headers the time endpoint sends. Captured 2026-08-25 with a POST carrying an
+ *  empty body, which the gateway answered
+ *  {"code":51,"message":"The d field is required","data":null}.
+ *
+ *  They look inconsequential. So did the two headers that separated a working
+ *  time reply from a rejected one, which is exactly why they are reproduced. */
+function kongHeaders() {
+  return (
+    'vary: Origin\r\n' +
+    'Access-Control-Allow-Credentials: true\r\n' +
+    'X-Kong-Upstream-Latency: 2\r\n' +
+    'X-Kong-Proxy-Latency: 0\r\n' +
+    'Via: 1.1 kong/3.9.1\r\n' +
+    `X-Kong-Request-Id: ${crypto.randomBytes(16).toString('hex')}\r\n` +
+    'Strict-Transport-Security: max-age=31536000; includeSubDomains\r\n'
+  );
 }
 
 /** Write a raw reply and deal with the connection afterwards.
@@ -174,14 +194,27 @@ function rawReply(contentType, body) {
  *  TLS (the telemetry upload) is read by mbedTLS_SSL_Recv_WithRetry
  *  (0x08015914), and that loop has no such condition. Its only early exit with
  *  data is mbedTLS_SSL_Read returning 0xFFFF8780 -- MBEDTLS_ERR_SSL_PEER_CLOSE_
- *  NOTIFY. Absent a clean TLS shutdown from us the device sits out its full 20 s
- *  timeout on every single upload. destroy() will not do: it tears down TCP
- *  without a close_notify. end() sends one.
+ *  NOTIFY. Absent that the device sits out its full 20 s timeout on every
+ *  upload -- and the real endpoint does exactly that: a raw capture on
+ *  2026-08-25 showed it answering keep-alive and never closing, so a 20 s wait
+ *  per upload is normal and not a fault to fix.
+ *
+ *  What must not happen is cutting the connection while the device is still in
+ *  that loop. Any error other than WANT_READ/WANT_WRITE is returned as the
+ *  result, discarding the bytes already received, and the caller then stores it
+ *  as a length -- so a hard reset at six seconds had llhttp parsing tens of
+ *  thousands of bytes out of a 3 KB buffer. Guaranteed parse failure, which is
+ *  return code -10, which is the error branch in FUN_08015bd0 where count is
+ *  never decremented.
+ *
+ *  So: hold the connection well past the device's own timeout, then end it
+ *  cleanly. Never destroy() it.
  */
-function sendRaw(res, buf, closeNow) {
+function sendRaw(res, buf) {
   res.socket.write(buf);
-  if (closeNow) res.socket.end();
-  else setTimeout(() => res.socket && res.socket.destroy(), 6000);
+  // 25 s: past the firmware's 20 s receive timeout, so the shutdown can never
+  // land mid-read. end() is a clean close (close_notify on TLS), not destroy().
+  setTimeout(() => res.socket && !res.socket.destroyed && res.socket.end(), 25000);
 }
 
 /** Fetch the time endpoint upstream over plain HTTP and hand back the raw
@@ -365,7 +398,7 @@ function handle(scheme) {
 
       if (isTime) {
         // Byte-for-byte as the real endpoint answers -- see rawReply().
-        sendRaw(res, rawReply('text/html; charset=utf-8', timeResponse()), scheme === 'https');
+        sendRaw(res, rawReply('text/html; charset=utf-8', timeResponse()));
       } else if (accept) {
         // "code":0 is what FUN_0801774c looks for. The shape mirrors the real
         // endpoint, which answers e.g. {"code":51,"message":"...","data":null}
@@ -381,8 +414,11 @@ function handle(scheme) {
         // close_notify from us -- see sendRaw().
         sendRaw(
           res,
-          rawReply('application/json', '{"code":0,"message":"success","data":null}'),
-          scheme === 'https'
+          rawReply(
+            'application/json',
+            '{"code":0,"message":"success","data":null}',
+            kongHeaders()
+          )
         );
       } else {
         // Headers alone already end with CRLF CRLF, so the receive loop is
