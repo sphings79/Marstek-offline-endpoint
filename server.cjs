@@ -190,7 +190,12 @@ function handle(scheme) {
       );
 
       if (isTime) {
-        const payload = Buffer.from(timeResponse());
+        // The trailing CRLF is not decoration. HTTPS_POST_ReceiveResponseData
+        // (0x08015744) only leaves its receive loop early when the last two
+        // bytes in the buffer are \r\n -- otherwise it sits out the full
+        // timeout passed by Cloud_Report_URL_Builder(1, 0x14), i.e. 20 s, and
+        // the firmware retries four times before giving up.
+        const payload = Buffer.from(timeResponse() + '\r\n');
         res.writeHead(200, {
           // What the real endpoint sends.
           'Content-Type': 'text/html; charset=utf-8',
@@ -206,7 +211,8 @@ function handle(scheme) {
         // "code":0 is what FUN_0801774c looks for. The shape mirrors the real
         // endpoint, which answers e.g. {"code":51,"message":"...","data":null}
         // when a request is rejected.
-        const payload = Buffer.from('{"code":0,"message":"success","data":null}');
+        // Same CRLF requirement as the time reply -- see the comment above.
+        const payload = Buffer.from('{"code":0,"message":"success","data":null}\r\n');
         res.writeHead(200, {
           'Content-Type': 'application/json',
           'Content-Length': payload.length,
