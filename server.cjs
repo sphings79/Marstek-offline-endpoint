@@ -28,6 +28,7 @@
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+const net = require('net');
 const https = require('https');
 
 const HTTPS_PORT = Number(process.env.HTTPS_PORT || 443);
@@ -43,6 +44,47 @@ const UPLOAD_PATH = /^\/data-upload\/v1\/venus\//;
 
 // Opt-in: answer every request with {"code":0}. Off by default, deliberately.
 const ACCEPT_ALL = process.env.ACCEPT_ALL === '1';
+
+// MQTT probe. The device keeps an MQTT session with AWS IoT that this endpoint
+// cannot serve — that path verifies the server certificate against a CA in flash
+// (mbedTLS_SSL_Conf_Authmode(conf, 2)) and presents a client certificate, so it
+// cannot be answered without the AWS signing key. What this listener does is
+// narrower and purely diagnostic: point the broker's hostname here, and every
+// connection attempt gets logged with a timestamp. If those attempts line up
+// with dropouts you are seeing, the MQTT path is what causes them.
+//
+// Set MQTT_PORT=0 to switch it off.
+const MQTT_PORT = Number(process.env.MQTT_PORT ?? 8883);
+
+/** Best-effort SNI from a TLS ClientHello, so the log names the host the device
+ *  asked for. Returns null for anything that is not a parseable ClientHello. */
+function sniFromClientHello(buf) {
+  try {
+    if (buf.length < 45 || buf[0] !== 0x16) return null; // not a TLS handshake
+    let p = 5; // skip record header
+    if (buf[p] !== 0x01) return null; // not ClientHello
+    p += 4 + 2 + 32; // handshake header, version, random
+    p += 1 + buf[p]; // session id
+    p += 2 + buf.readUInt16BE(p); // cipher suites
+    p += 1 + buf[p]; // compression methods
+    if (p + 2 > buf.length) return null;
+    const extEnd = p + 2 + buf.readUInt16BE(p);
+    p += 2;
+    while (p + 4 <= Math.min(extEnd, buf.length)) {
+      const type = buf.readUInt16BE(p);
+      const len = buf.readUInt16BE(p + 2);
+      if (type === 0x0000) {
+        // server_name: list length, name type, name length, name
+        const nameLen = buf.readUInt16BE(p + 7);
+        return buf.toString('utf8', p + 9, p + 9 + nameLen);
+      }
+      p += 4 + len;
+    }
+  } catch {
+    /* malformed — fall through */
+  }
+  return null;
+}
 
 // The time endpoint. Answering it sets the device's RTC — which is a real change
 // to the device, so it can be switched off. On by default: without a cloud the
@@ -151,6 +193,52 @@ function handle(scheme) {
       }
     });
   };
+}
+
+if (MQTT_PORT > 0) {
+  net
+    .createServer((socket) => {
+      const remote = socket.remoteAddress;
+      const chunks = [];
+      let size = 0;
+
+      const finish = (reason) => {
+        if (socket.destroyed) return;
+        const first = Buffer.concat(chunks);
+        const sni = sniFromClientHello(first);
+        logRequest({
+          ts: new Date().toISOString(),
+          scheme: 'mqtt',
+          method: 'CONNECT',
+          host: sni,
+          url: `:${MQTT_PORT}`,
+          remote,
+          bytes: size,
+          hexPrefix: first.subarray(0, 48).toString('hex') || undefined,
+          closedBy: reason,
+        });
+        console.log(
+          `${stamp()} MQTT   tcp  CONNECT :${MQTT_PORT} from ${remote} ` +
+            `(${size} B${sni ? `, sni ${sni}` : ''})`
+        );
+        socket.destroy();
+      };
+
+      socket.on('data', (chunk) => {
+        size += chunk.length;
+        if (chunks.length < 8) chunks.push(chunk);
+        if (size >= 512) finish('enough-data');
+      });
+      socket.on('error', () => finish('error'));
+      socket.on('end', () => finish('peer-closed'));
+      // Do not leave the device hanging: log what came in, then drop it. A fast
+      // failure is also the friendlier answer if a stalled handshake is what
+      // blocks the device's network stack.
+      setTimeout(() => finish('timeout'), 2000).unref();
+    })
+    .listen(MQTT_PORT, () =>
+      console.log(`mqtt  probe listening on :${MQTT_PORT} (log only, no TLS)`)
+    );
 }
 
 const key = fs.readFileSync(path.join(CERT_DIR, 'server.key'));

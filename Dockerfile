@@ -11,7 +11,7 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 VOLUME ["/data", "/certs"]
-EXPOSE 443 80
+EXPOSE 443 80 8883
 
 ENV LOG_DIR=/data CERT_DIR=/certs
 

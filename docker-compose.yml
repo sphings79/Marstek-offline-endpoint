@@ -9,6 +9,7 @@ services:
     ports:
       - "443:443"
       - "80:80"
+      - "8883:8883"   # MQTT connection probe (log only)
     volumes:
       - ./data:/data      # one JSONL per day: everything the device sent
       - ./certs:/certs    # self-signed certificate, generated on first start

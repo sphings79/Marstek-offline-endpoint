@@ -146,11 +146,38 @@ guessed at. Device ID, serial and IP are redacted unless you pass `--no-redact`.
 Field reference and method:
 <https://github.com/sphings79/marstek_venus_modbus_dev/issues/2>
 
+## The MQTT probe
+
+The device also keeps an MQTT session with AWS IoT, and **this endpoint cannot
+serve it**: that path verifies the broker's certificate against a CA stored in
+flash and presents a client certificate of its own. Faking it would need the AWS
+signing key, which is the whole point of a certificate.
+
+What the container does instead is diagnostic. Point the broker's hostname at
+this machine and every connection attempt is logged, with a timestamp and the
+SNI from the TLS ClientHello:
+
+```
+2026-08-25 08:58:40 MQTT   tcp  CONNECT :8883 from 192.168.x.z (1576 B, sni a40…iot.eu-west-3.amazonaws.com)
+```
+
+That answers a question the HTTP side cannot: **is MQTT what disturbs your
+network every N minutes?** If those log lines line up with dropouts you are
+measuring, you have the culprit. If nothing ever connects, MQTT is not involved
+and you can look elsewhere.
+
+The listener never completes a handshake — it reads what arrives, logs it and
+closes. A quick refusal is also the friendlier answer if a stalled handshake is
+what blocks the device's network stack in the first place.
+
+Set `MQTT_PORT=0` to switch it off.
+
 ## What it does not do
 
-- **MQTT is untouched.** That path uses `Authmode 2` with a CA chain *and* a
-  client certificate (`mbedTLS_SSL_Connection_Init`). It cannot be answered this
-  way, and this container makes no attempt to.
+- **MQTT is not served, only observed.** That path uses `Authmode 2` with a CA
+  chain *and* a client certificate (`mbedTLS_SSL_Connection_Init`). It cannot be
+  answered without the signing key, and this container makes no attempt to — see
+  the MQTT probe above.
 - **Other endpoints are logged, not answered.** Requests that are not the
   telemetry upload get a 404. Pretending to be an endpoint whose expected reply
   nobody has reverse-engineered could change device behaviour in untested ways —
@@ -167,6 +194,7 @@ Field reference and method:
 | `TZ` | `UTC` | timezone the clock is served in, e.g. `Europe/Berlin` |
 | `HTTPS_PORT` | `443` | |
 | `HTTP_PORT` | `80` | plain-http hamedata endpoints, logged only |
+| `MQTT_PORT` | `8883` | MQTT connection probe, log only; `0` disables |
 | `LOG_DIR` | `/data` | one JSONL file per day |
 | `CERT_DIR` | `/certs` | certificate and key |
 | `MAX_BODY` | `262144` | bytes kept per request |
