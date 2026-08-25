@@ -3,7 +3,7 @@
 # 32-bit Raspberry Pi OS needs linux/arm/v7.
 FROM alpine:3.20
 
-RUN apk add --no-cache nodejs openssl
+RUN apk add --no-cache nodejs openssl tzdata
 
 WORKDIR /app
 COPY server.cjs /app/server.cjs

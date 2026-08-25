@@ -13,6 +13,15 @@
  *   - a response body containing  "code":0   (FUN_0801774c: strstr + atoi)
  * Anything else about the response is not inspected.
  *
+ * It also polls a time endpoint every ~20 s. HTTP_ParseServerDateTime_UpdateRTC
+ * looks for an underscore and then reads fixed offsets from it:
+ *
+ *     _YYYY-MM-DD hh:mm:ss
+ *      1234 67 90 23 56 89     <- offsets from the underscore
+ *
+ * The separators are not checked, only the positions. Answering it sets the
+ * device's real-time clock and stops the polling.
+ *
  * Node core modules only — no dependencies to audit.
  */
 
@@ -34,6 +43,23 @@ const UPLOAD_PATH = /^\/data-upload\/v1\/venus\//;
 
 // Opt-in: answer every request with {"code":0}. Off by default, deliberately.
 const ACCEPT_ALL = process.env.ACCEPT_ALL === '1';
+
+// The time endpoint. Answering it sets the device's RTC — which is a real change
+// to the device, so it can be switched off. On by default: without a cloud the
+// battery has no other time source, and a drifting clock is the worse outcome.
+const ANSWER_TIME = process.env.ANSWER_TIME !== '0';
+const TIME_PATH = /\/getDateInfo/;
+
+/** Local time in the format HTTP_ParseServerDateTime_UpdateRTC expects. */
+function timeResponse(now = new Date()) {
+  const p = (n) => String(n).padStart(2, '0');
+  // Local time of this container — set TZ (e.g. TZ=Europe/Berlin) to match the
+  // clock you want the battery to run on.
+  return (
+    `_${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ` +
+    `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`
+  );
+}
 
 fs.mkdirSync(LOG_DIR, { recursive: true });
 
@@ -63,6 +89,7 @@ function handle(scheme) {
     req.on('end', () => {
       const raw = Buffer.concat(chunks).toString('utf8');
       const isUpload = UPLOAD_PATH.test(req.url || '');
+      const isTime = ANSWER_TIME && TIME_PATH.test(req.url || '');
       const accept = isUpload || ACCEPT_ALL;
 
       let body = raw;
@@ -81,18 +108,26 @@ function handle(scheme) {
         remote: req.socket.remoteAddress,
         headers: req.headers,
         truncated: tooBig || undefined,
-        accepted: accept,
+        accepted: accept || isTime,
+        answeredWith: isTime ? 'time' : accept ? 'code0' : undefined,
         body,
       });
 
-      const tag = accept ? 'ACCEPT' : 'log   ';
+      const tag = isTime ? 'TIME  ' : accept ? 'ACCEPT' : 'log   ';
       console.log(
         `${new Date().toISOString()} ${tag} ${scheme} ${req.method} ` +
           `${req.headers.host || '-'}${req.url} from ${req.socket.remoteAddress} ` +
           `(${size} B)`
       );
 
-      if (accept) {
+      if (isTime) {
+        const payload = Buffer.from(timeResponse());
+        res.writeHead(200, {
+          'Content-Type': 'text/plain',
+          'Content-Length': payload.length,
+        });
+        res.end(payload);
+      } else if (accept) {
         // "code":0 is what FUN_0801774c looks for. Nothing else is parsed.
         const payload = Buffer.from('{"code":0,"msg":"ok"}');
         res.writeHead(200, {
@@ -136,5 +171,10 @@ http
   .listen(HTTP_PORT, () => console.log(`http  listening on :${HTTP_PORT}`));
 
 console.log(`upload endpoint answered: ${UPLOAD_PATH}`);
+console.log(
+  ANSWER_TIME
+    ? `time endpoint answered:   ${TIME_PATH}  -> ${timeResponse()}`
+    : 'time endpoint answered:   no (ANSWER_TIME=0)'
+);
 console.log(`accept everything: ${ACCEPT_ALL ? 'yes (ACCEPT_ALL=1)' : 'no'}`);
 console.log(`logs: ${LOG_DIR}`);

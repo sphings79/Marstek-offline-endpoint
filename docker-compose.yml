@@ -16,3 +16,5 @@ services:
       # Answer every request with {"code":0}, not just the telemetry upload.
       # Off by default — see README before switching this on.
       - ACCEPT_ALL=0
+      # Timezone the device's clock is set to
+      - TZ=Europe/Berlin

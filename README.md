@@ -106,6 +106,42 @@ Then watch the dropouts stop. Everything the device sent is in
 `./data/requests-YYYY-MM-DD.jsonl`, one JSON object per request — which also
 means you now have your own telemetry, locally.
 
+## The clock, and reading what your battery sent
+
+The device polls a time endpoint every ~20 seconds. This container answers it,
+so the battery sets its real-time clock from your Pi instead of from the cloud —
+and the polling stops. The format comes from
+`HTTP_ParseServerDateTime_UpdateRTC`, which looks for an underscore and then
+reads fixed offsets:
+
+```
+_YYYY-MM-DD hh:mm:ss
+```
+
+Set the timezone you want the battery to run on:
+
+```
+docker run … -e TZ=Europe/Berlin ghcr.io/sphings79/marstek-offline-endpoint:latest
+```
+
+Turn it off with `ANSWER_TIME=0` if you would rather not have the container
+setting your device's clock.
+
+Everything the device uploads lands in `data/requests-YYYY-MM-DD.jsonl`. To read
+it:
+
+```
+./decode.py            # newest upload, decoded
+./decode.py --raw      # including the keys nobody has identified yet
+./decode.py --all      # every upload in the file
+```
+
+Only fields confirmed against a second source (the same device read over Modbus
+at the same moment) are given a meaning; the rest is printed raw rather than
+guessed at. Device ID, serial and IP are redacted unless you pass `--no-redact`.
+Field reference and method:
+<https://github.com/sphings79/marstek_venus_modbus_dev/issues/2>
+
 ## What it does not do
 
 - **MQTT is untouched.** That path uses `Authmode 2` with a CA chain *and* a
@@ -123,6 +159,8 @@ means you now have your own telemetry, locally.
 | Variable | Default | Meaning |
 |---|---|---|
 | `ACCEPT_ALL` | `0` | answer every path with `{"code":0}` |
+| `ANSWER_TIME` | `1` | answer the time endpoint (sets the device's clock) |
+| `TZ` | `UTC` | timezone the clock is served in, e.g. `Europe/Berlin` |
 | `HTTPS_PORT` | `443` | |
 | `HTTP_PORT` | `80` | plain-http hamedata endpoints, logged only |
 | `LOG_DIR` | `/data` | one JSONL file per day |
