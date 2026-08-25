@@ -206,6 +206,10 @@ Set `MQTT_PORT=0` to switch it off.
 | `LOG_DIR` | `/data` | one JSONL file per day |
 | `CERT_DIR` | `/certs` | certificate and key |
 | `MAX_BODY` | `262144` | bytes kept per request |
+| `PROXY_TIME_IP` | — | diagnostic: forward the *time* request to this address and return its answer verbatim (see below) |
+| `PROXY_TIME_HOST` | `eu.hamedata.com` | Host header used when proxying |
+| `PROXY_TIME_PORT` | `80` | upstream port |
+| `PROXY_TIME_MS` | `8000` | give up on the upstream after this long and answer locally |
 
 ## Keep it running — this matters more than it looks
 
@@ -239,6 +243,38 @@ than a WAN dependency.
 solid. Why the buffer stays above the threshold on some devices and not others is
 still open — the firmware does have a drain path that should empty it. If you run
 this container, upload counts from your `/data` logs would genuinely help.*
+
+## Diagnostic: proxying the time request
+
+Sometimes you need to know whether the device behaves differently when the reply
+is *genuine* rather than a good imitation. No amount of matching bytes settles
+that on its own — so this mode forwards the time request to the real endpoint and
+returns what comes back, byte for byte: status line, headers and body exactly as
+received, with no re-framing by Node.
+
+```bash
+docker run ... -e PROXY_TIME_IP=3.68.141.219 ...
+```
+
+**The telemetry upload is never proxied.** It is answered locally in this mode
+just as in every other. What leaves your network is the time GET alone, which
+carries the device id and the firmware version numbers — no measurements, no
+energy data.
+
+It takes an address rather than a hostname on purpose: this container is what the
+device's DNS points at, so resolving the name here would loop straight back. Find
+the real address from a machine that is not using your rewrite:
+
+```bash
+curl -s -H 'accept: application/dns-json' 'https://1.1.1.1/dns-query?name=eu.hamedata.com&type=A'
+```
+
+Each proxied request is logged with the upstream address, how long it took, how
+many bytes came back and the raw response, so you can diff it against what this
+container would have answered. If the upstream cannot be reached the request is
+answered locally instead, so the device is never left waiting.
+
+Unset the variable to go back to fully offline operation.
 
 ## A warning worth reading
 

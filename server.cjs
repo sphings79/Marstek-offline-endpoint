@@ -99,6 +99,72 @@ function sniFromClientHello(buf) {
 const ANSWER_TIME = process.env.ANSWER_TIME !== '0';
 const TIME_PATH = /\/getDateInfo/;
 
+// Diagnostic passthrough, off by default.
+//
+// Set PROXY_TIME_IP to the real endpoint's address and the *time* request is
+// forwarded there and its answer returned to the device byte for byte -- status
+// line, headers and body exactly as received, with no rewriting by Node. That
+// is the point: it answers whether the device behaves differently when the
+// reply is genuine, which no amount of imitation can settle.
+//
+// The telemetry upload is NEVER proxied. It stays local, always. What leaves
+// the LAN in this mode is the time GET alone, which carries the device id and
+// the firmware versions -- no measurements.
+//
+// An address rather than a hostname on purpose: this container is what the
+// device's DNS points at, so resolving the name here would loop straight back.
+// Find the real one from a machine that is not using your rewrite:
+//   curl -s -H 'accept: application/dns-json' \
+//        'https://1.1.1.1/dns-query?name=eu.hamedata.com&type=A'
+const PROXY_TIME_IP = process.env.PROXY_TIME_IP || '';
+const PROXY_TIME_HOST = process.env.PROXY_TIME_HOST || 'eu.hamedata.com';
+const PROXY_TIME_PORT = Number(process.env.PROXY_TIME_PORT || 80);
+const PROXY_TIME_MS = Number(process.env.PROXY_TIME_MS || 8000);
+
+/** Fetch the time endpoint upstream over plain HTTP and hand back the raw
+ *  bytes. Deliberately a bare socket: an http.request would re-encode the
+ *  response and destroy the very detail under investigation. */
+function proxyTime(url, done) {
+  const started = Date.now();
+  const chunks = [];
+  let size = 0;
+  let settled = false;
+
+  const finish = (reason) => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(timer);
+    upstream.destroy();
+    done(Buffer.concat(chunks), reason, Date.now() - started);
+  };
+
+  const upstream = net.connect(PROXY_TIME_PORT, PROXY_TIME_IP);
+  const timer = setTimeout(() => finish('timeout'), PROXY_TIME_MS);
+
+  upstream.on('connect', () =>
+    upstream.write(`GET ${url} HTTP/1.1\r\nHost: ${PROXY_TIME_HOST}\r\n\r\n`)
+  );
+
+  upstream.on('data', (c) => {
+    chunks.push(c);
+    size += c.length;
+    if (size > MAX_BODY) return finish('too big');
+    const buf = Buffer.concat(chunks);
+    const head = buf.indexOf('\r\n\r\n');
+    if (head < 0) return;
+    const headers = buf.subarray(0, head).toString('latin1').toLowerCase();
+    if (headers.includes('transfer-encoding: chunked')) {
+      if (buf.subarray(head).includes('\r\n0\r\n\r\n')) finish('complete');
+    } else {
+      const m = headers.match(/content-length:\s*(\d+)/);
+      if (m && buf.length - (head + 4) >= Number(m[1])) finish('complete');
+    }
+  });
+
+  upstream.on('error', (e) => finish(`error: ${e.message}`));
+  upstream.on('close', () => finish('upstream closed'));
+}
+
 /** Local wall-clock stamp for the console, so it lines up with the rest of your
  *  logs. The JSONL keeps ISO-8601 UTC, which stays unambiguous for machines. */
 function stamp(now = new Date()) {
@@ -188,6 +254,42 @@ function handle(scheme) {
           `${req.headers.host || '-'}${req.url} from ${req.socket.remoteAddress} ` +
           `(${size} B)`
       );
+
+      if (isTime && PROXY_TIME_IP) {
+        proxyTime(req.url, (raw, reason, ms) => {
+          if (raw.length) {
+            // Verbatim, straight onto the socket. Going through res.writeHead
+            // and res.end would let Node re-frame the reply, which is exactly
+            // the detail this mode exists to preserve.
+            res.socket.write(raw);
+            // The real endpoint answers keep-alive and leaves the connection
+            // up, so do the same rather than closing early -- but do not leak
+            // the socket either.
+            setTimeout(() => res.socket && res.socket.destroy(), 6000);
+          } else {
+            // Upstream unreachable. Answer locally rather than leave the device
+            // waiting out its 20 s timeout.
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end(timeResponse());
+          }
+          logRequest({
+            ts: new Date().toISOString(),
+            scheme,
+            kind: 'proxy-time',
+            url: req.url,
+            upstream: `${PROXY_TIME_IP}:80`,
+            reason,
+            ms,
+            bytes: raw.length,
+            raw: raw.toString('latin1'),
+          });
+          console.log(
+            `${stamp()} PROXY  ${scheme} ${PROXY_TIME_IP} ${reason} ` +
+              `${ms} ms, ${raw.length} B${raw.length ? '' : ' -> answered locally'}`
+          );
+        });
+        return;
+      }
 
       if (isTime) {
         // Framing matters here, and it is copied from a raw capture of the real
@@ -301,9 +403,12 @@ http
 
 console.log(`upload endpoint answered: ${UPLOAD_PATH}`);
 console.log(
-  ANSWER_TIME
-    ? `time endpoint answered:   ${TIME_PATH}  -> ${timeResponse()}`
-    : 'time endpoint answered:   no (ANSWER_TIME=0)'
+  PROXY_TIME_IP
+    ? `time endpoint PROXIED to ${PROXY_TIME_IP}:${PROXY_TIME_PORT} ` +
+      `(Host: ${PROXY_TIME_HOST}) -- uploads stay local`
+    : ANSWER_TIME
+      ? `time endpoint answered:   ${TIME_PATH}  -> ${timeResponse()}`
+      : 'time endpoint answered:   no (ANSWER_TIME=0)'
 );
 console.log(`accept everything: ${ACCEPT_ALL ? 'yes (ACCEPT_ALL=1)' : 'no'}`);
 console.log(`logs: ${LOG_DIR}`);
