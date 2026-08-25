@@ -207,6 +207,40 @@ Set `MQTT_PORT=0` to switch it off.
 | `CERT_DIR` | `/certs` | certificate and key |
 | `MAX_BODY` | `262144` | bytes kept per request |
 
+## Keep it running — this matters more than it looks
+
+The battery keeps unsent telemetry in a ring buffer and counts the records in it.
+A record is added roughly every one to three minutes. One record is removed only
+when an upload is answered with `"code":0`.
+
+If **more than one** record is ever left unconfirmed, the firmware concludes the
+network path is broken and resets the Ethernet bridge — every 1800 seconds, from
+then on. During each reset the device is gone from the network for two to three
+seconds: no Modbus, not even ICMP. That is the "every 30 minutes my battery drops
+off" report you will find in several places.
+
+The awkward part is in the decompiled control firmware (`FUN_08015bd0`, the HTTP
+task): an upload is only started when a new record requests one, and the request
+flag is cleared as soon as that upload succeeds. So exactly one record is removed
+per record added. **The counter can never drain — it can only rise, or stand
+still.** Once it is above one, it stays above one.
+
+Two things follow:
+
+- **A cold start clears it.** The counter lives in regular SRAM with no
+  persistence path, so it is zeroed on boot. If your device is already in the
+  30-minute cycle, power it off and on *after* this container is answering, and it
+  should stay out of it.
+- **Downtime here is not free.** If this container is unreachable long enough for
+  two records to go unconfirmed — roughly five minutes — the device drops into the
+  30-minute cycle and will not leave it until the next cold start. Answering the
+  upload reliably is the whole job. Use `--restart unless-stopped`, and if the host
+  reboots, check afterwards that the container came back.
+
+None of this is a flaw introduced by running offline. The same thing happens
+whenever the real cloud is unreachable for a few minutes; a LAN endpoint simply
+fails less often than a WAN dependency.
+
 ## A warning worth reading
 
 TLS here is deliberately permissive: versions 1.0–1.2 and `SECLEVEL=0`, because
@@ -216,14 +250,22 @@ that holds nothing of value. **Do not expose this container to the internet.**
 
 ## Verified how?
 
-The two requirements above were read out of the decompiled Control firmware
-v150, and the server was tested against them: a POST to
-`/data-upload/v1/venus/…` is answered with `{"code":0,"msg":"ok"}`, the
-firmware's own check (`strstr` for `"code":` then `atoi` on the next byte)
-evaluates that to 0 — accepted — and TLS 1.0, 1.1 and 1.2 handshakes all
-succeed. What has **not** been tested at the time of writing is a real battery
-talking to it; if you get there first, an issue with your log would be welcome.
+The requirements above were read out of the decompiled Control firmware v150 and
+then confirmed against a real Venus D on firmware 150 over LAN:
 
----
+- A POST to `/data-upload/v1/venus/…` is answered with
+  `{"code":0,"message":"success","data":null}`. The firmware's own check
+  (`FUN_0801774c`: `strstr` for `"code":`, then `atoi` on the next byte) evaluates
+  that to 0 — accepted — and the device stops retrying the record.
+- The time reply is byte-identical in shape to the real endpoint's. Both were
+  queried in the same second and compared:
+  `_2026_08_25_07_23_25_04_0_0_0`, in UTC.
+- The region actually used by the device (`eu`) was observed on the wire rather
+  than assumed.
+- TLS 1.0, 1.1 and 1.2 handshakes all succeed; the device presents no client
+  certificate on this path and validates nothing, matching `Authmode 0` in
+  `HTTPS_TLS_Session_Init`.
 
-Unofficial community tool. Not affiliated with Marstek. Use at your own risk.
+What is **not** verified is the effect described under "Keep it running" on any
+device other than the author's. If you run this, a log covering a few hours of
+pings would be welcome in an issue.
