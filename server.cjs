@@ -161,12 +161,27 @@ function rawReply(contentType, body) {
   ]);
 }
 
-/** Write a raw reply and clean the socket up afterwards. The real endpoint
- *  answers keep-alive and leaves the connection standing, so this does too --
- *  it just does not leak it. */
-function sendRaw(res, buf) {
+/** Write a raw reply and deal with the connection afterwards.
+ *
+ *  The two transports need opposite things, and both are read out of firmware.
+ *
+ *  Plain HTTP (the time endpoint) is read by HTTPS_POST_ReceiveResponseData
+ *  (0x08015744), which stops as soon as the buffer ends in CR LF and roughly a
+ *  second has passed with nothing arriving. The real endpoint answers
+ *  keep-alive and leaves the connection up, so this does the same and only
+ *  reaps the socket afterwards to avoid leaking it.
+ *
+ *  TLS (the telemetry upload) is read by mbedTLS_SSL_Recv_WithRetry
+ *  (0x08015914), and that loop has no such condition. Its only early exit with
+ *  data is mbedTLS_SSL_Read returning 0xFFFF8780 -- MBEDTLS_ERR_SSL_PEER_CLOSE_
+ *  NOTIFY. Absent a clean TLS shutdown from us the device sits out its full 20 s
+ *  timeout on every single upload. destroy() will not do: it tears down TCP
+ *  without a close_notify. end() sends one.
+ */
+function sendRaw(res, buf, closeNow) {
   res.socket.write(buf);
-  setTimeout(() => res.socket && res.socket.destroy(), 6000);
+  if (closeNow) res.socket.end();
+  else setTimeout(() => res.socket && res.socket.destroy(), 6000);
 }
 
 /** Fetch the time endpoint upstream over plain HTTP and hand back the raw
@@ -350,21 +365,24 @@ function handle(scheme) {
 
       if (isTime) {
         // Byte-for-byte as the real endpoint answers -- see rawReply().
-        sendRaw(res, rawReply('text/html; charset=utf-8', timeResponse()));
+        sendRaw(res, rawReply('text/html; charset=utf-8', timeResponse()), scheme === 'https');
       } else if (accept) {
         // "code":0 is what FUN_0801774c looks for. The shape mirrors the real
         // endpoint, which answers e.g. {"code":51,"message":"...","data":null}
         // when a request is rejected.
         //
-        // The framing is the same as the time reply. That part is an
-        // extrapolation: the upload host was never captured raw, so this
-        // assumes it is served by the same stack as eu.hamedata.com. It does
-        // share the receive path in firmware (HTTPS_POST_ReceiveResponseData),
-        // which is what made the time reply fail, so matching it is the better
-        // guess -- but it is a guess.
+        // Same framing as the time reply. That much is an extrapolation: the
+        // upload host was never captured raw, so this assumes it runs on the
+        // same stack as eu.hamedata.com.
+        //
+        // The connection handling, though, is not a guess and is not shared.
+        // This path is TLS, and the firmware reads it with
+        // mbedTLS_SSL_Recv_WithRetry (0x08015914), whose only early exit is a
+        // close_notify from us -- see sendRaw().
         sendRaw(
           res,
-          rawReply('application/json', '{"code":0,"message":"success","data":null}')
+          rawReply('application/json', '{"code":0,"message":"success","data":null}'),
+          scheme === 'https'
         );
       } else {
         // Headers alone already end with CRLF CRLF, so the receive loop is

@@ -312,6 +312,13 @@ then confirmed against a real Venus D on firmware 150 over LAN:
   headers in a different order — was **rejected**: the device retried four times
   at 20 s intervals and gave up without setting its clock. Which of those
   details it objects to is not established; this reproduces all of them.
+- The upload runs over TLS, and the firmware reads that response with a
+  different loop than the plain-HTTP one: `mbedTLS_SSL_Recv_WithRetry`
+  (`0x08015914`) has no CR LF condition at all. Its only early exit carrying data
+  is `mbedTLS_SSL_Read` returning `MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY`, so without
+  a clean TLS shutdown from the server the device sits out its full 20 s timeout
+  on every upload. This container ends the TLS session right after answering;
+  verified locally that a client sees a proper close_notify within 10 ms.
 - The region actually used by the device (`eu`) was observed on the wire rather
   than assumed.
 - TLS 1.0, 1.1 and 1.2 handshakes all succeed; the device presents no client
