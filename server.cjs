@@ -171,6 +171,7 @@ function handle(scheme) {
         ts: new Date().toISOString(),
         scheme,
         method: req.method,
+        httpVersion: req.httpVersion,
         host: req.headers.host || null,
         url: req.url,
         remote: req.socket.remoteAddress,
@@ -194,6 +195,11 @@ function handle(scheme) {
           // What the real endpoint sends.
           'Content-Type': 'text/html; charset=utf-8',
           'Content-Length': payload.length,
+          // The device's HTTP client does not return until the connection is
+          // closed: with Node's default keep-alive it sat out the full 20 s
+          // timeout from Cloud_Report_URL_Builder(1, 0x14) and retried four
+          // times. Measured 2026-08-25 -- see README, "Keep it running".
+          Connection: 'close',
         });
         res.end(payload);
       } else if (accept) {
@@ -204,10 +210,11 @@ function handle(scheme) {
         res.writeHead(200, {
           'Content-Type': 'application/json',
           'Content-Length': payload.length,
+          Connection: 'close',
         });
         res.end(payload);
       } else {
-        res.writeHead(404, { 'Content-Length': 0 });
+        res.writeHead(404, { 'Content-Length': 0, Connection: 'close' });
         res.end();
       }
     });
