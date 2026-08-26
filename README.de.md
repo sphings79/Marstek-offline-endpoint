@@ -347,6 +347,15 @@ Ordnung. **Setz diesen Container nicht ins Internet.**
 - 📦 **[Marstek-Firmware-Archiv](https://github.com/sphings79/marstek-firmware-archiv)**
 - 🌐 **[Weitere Projekte und Werkzeuge](https://sphings-dev.de/)**
 
+---
+
+## ☕ Unterstützen
+
+Diese Tools entstehen in meiner Freizeit und bleiben kostenlos, quelloffen und cloudfrei.
+Wenn dir eines davon einen Nachmittag gespart hat, kannst du mir [einen Kaffee ausgeben](https://buymeacoffee.com/sphings).
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-sphings-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=000000)](https://buymeacoffee.com/sphings)
+
 ## Lizenz
 
 MIT — siehe [LICENSE](LICENSE).
