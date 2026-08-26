@@ -349,7 +349,7 @@ Ordnung. **Setz diesen Container nicht ins Internet.**
 
 ---
 
-## ☕ Unterstützen
+## Sponsor this project
 
 Diese Tools entstehen in meiner Freizeit und bleiben kostenlos, quelloffen und cloudfrei.
 Wenn dir eines davon einen Nachmittag gespart hat, kannst du mir [einen Kaffee ausgeben](https://buymeacoffee.com/sphings).
