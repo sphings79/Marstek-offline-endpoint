@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#111f36"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1280" height="5" fill="#22c55e"/>
+
+  <text x="90" y="188" font-size="30" font-weight="600" fill="#22c55e" letter-spacing="3">MARSTEK</text>
+  <text x="90" y="268" font-size="66" font-weight="700" fill="#f1f5f9">Offline Endpoint</text>
+  <text x="90" y="330" font-size="27" fill="#94a3b8">Run your Venus battery without the cloud —</text>
+  <text x="90" y="370" font-size="27" fill="#94a3b8">and stop it dropping off the network every 30 minutes.</text>
+
+  <rect x="90" y="424" width="470" height="56" rx="10" fill="#0f1b2e" stroke="#1e3a5f"/>
+  <text x="112" y="460" font-size="21" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#7dd3fc">{"code":0,"message":"success"}</text>
+
+  <text x="90" y="556" font-size="19" fill="#64748b">Self-hosted · Docker · amd64 / arm64 / armv7 · no telemetry leaves your LAN</text>
+
+  <g opacity="0.92">
+    <text x="880" y="196" font-size="16" fill="#94a3b8">before</text>
+    <rect x="880" y="212" width="310" height="26" rx="5" fill="#1a2740"/>
+    <rect x="890" y="215" width="4" height="20" rx="2" fill="#ef4444"/>
+    <rect x="932" y="215" width="4" height="20" rx="2" fill="#ef4444"/>
+    <rect x="974" y="215" width="4" height="20" rx="2" fill="#ef4444"/>
+    <rect x="1016" y="215" width="4" height="20" rx="2" fill="#ef4444"/>
+    <rect x="1058" y="215" width="4" height="20" rx="2" fill="#ef4444"/>
+    <rect x="1100" y="215" width="4" height="20" rx="2" fill="#ef4444"/>
+    <rect x="1142" y="215" width="4" height="20" rx="2" fill="#ef4444"/>
+    <text x="880" y="262" font-size="15" fill="#f87171">a dropout every 30 minutes</text>
+
+    <text x="880" y="330" font-size="16" fill="#94a3b8">after</text>
+    <rect x="880" y="346" width="310" height="26" rx="5" fill="#152a1f"/>
+    <text x="880" y="396" font-size="15" fill="#4ade80">none in seven hours</text>
+  </g>
+
+  <text x="90" y="600" font-size="17" fill="#475569">github.com/sphings79/Marstek-offline-endpoint</text>
+</svg>

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 470" width="1040" height="470" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/>
+    </marker>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/>
+    </marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/>
+    </marker>
+  </defs>
+
+  <rect width="1040" height="470" fill="#f8fafc"/>
+  <text x="30" y="42" font-size="21" font-weight="600" fill="#0f172a">Why the battery drops off the network every 30 minutes</text>
+  <text x="30" y="66" font-size="14" fill="#64748b">Read out of the decompiled Control firmware v150 and confirmed by measurement</text>
+
+  <rect x="30" y="185" width="180" height="86" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="120" y="219" font-size="14.5" font-weight="600" fill="#0f172a" text-anchor="middle">Telemetry record</text>
+  <text x="120" y="239" font-size="13" fill="#475569" text-anchor="middle">buffered in RAM,</text>
+  <text x="120" y="256" font-size="13" fill="#475569" text-anchor="middle">one every 5 minutes</text>
+
+  <line x1="215" y1="228" x2="253" y2="228" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#a)"/>
+
+  <rect x="258" y="185" width="160" height="86" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="338" y="219" font-size="14.5" font-weight="600" fill="#0f172a" text-anchor="middle">Uploaded</text>
+  <text x="338" y="239" font-size="13" fill="#475569" text-anchor="middle">to the Marstek cloud</text>
+  <text x="338" y="256" font-size="13" fill="#475569" text-anchor="middle">over HTTPS</text>
+
+  <path d="M423 210 C452 210 452 140 481 140" fill="none" stroke="#16a34a" stroke-width="1.8" marker-end="url(#ag)"/>
+  <path d="M423 246 C452 246 452 330 481 330" fill="none" stroke="#dc2626" stroke-width="1.8" marker-end="url(#ar)"/>
+
+  <rect x="486" y="96" width="232" height="88" rx="10" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="602" y="127" font-size="14.5" font-weight="600" fill="#166534" text-anchor="middle">Reply accepted</text>
+  <text x="602" y="147" font-size="13" fill="#15803d" text-anchor="middle">record dropped from the buffer,</text>
+  <text x="602" y="164" font-size="13" fill="#15803d" text-anchor="middle">backlog stays at 0 or 1</text>
+
+  <line x1="723" y1="140" x2="761" y2="140" stroke="#16a34a" stroke-width="1.8" marker-end="url(#ag)"/>
+
+  <rect x="766" y="96" width="244" height="88" rx="10" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="888" y="134" font-size="15" font-weight="600" fill="#166534" text-anchor="middle">Nothing happens</text>
+  <text x="888" y="156" font-size="13" fill="#15803d" text-anchor="middle">the battery stays reachable</text>
+
+  <rect x="486" y="286" width="232" height="88" rx="10" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="602" y="317" font-size="14.5" font-weight="600" fill="#991b1b" text-anchor="middle">Reply missing or rejected</text>
+  <text x="602" y="337" font-size="13" fill="#b91c1c" text-anchor="middle">record stays, backlog grows</text>
+  <text x="602" y="354" font-size="13" fill="#b91c1c" text-anchor="middle">past its limit of 1</text>
+
+  <line x1="723" y1="330" x2="761" y2="330" stroke="#dc2626" stroke-width="1.8" marker-end="url(#ar)"/>
+
+  <rect x="766" y="272" width="244" height="116" rx="10" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="888" y="302" font-size="15" font-weight="600" fill="#991b1b" text-anchor="middle">Every 1800 s the firmware</text>
+  <text x="888" y="322" font-size="15" font-weight="600" fill="#991b1b" text-anchor="middle">resets its own network chip</text>
+  <text x="888" y="346" font-size="13" fill="#b91c1c" text-anchor="middle">2–3 s with no Modbus,</text>
+  <text x="888" y="363" font-size="13" fill="#b91c1c" text-anchor="middle">no ping, nothing</text>
+
+  <rect x="30" y="410" width="980" height="42" rx="8" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="48" y="437" font-size="13.5" fill="#1e40af">This container is the green path. It answers the upload locally, so the backlog never builds and the reset never fires — and no telemetry leaves your network.</text>
+</svg>

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 480" width="1040" height="480" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/>
+    </marker>
+  </defs>
+
+  <rect width="1040" height="480" fill="#f8fafc"/>
+  <text x="60" y="40" font-size="21" font-weight="600" fill="#0f172a">How the redirect works</text>
+  <text x="60" y="64" font-size="14" fill="#64748b">Two DNS entries send the battery to your own machine instead of Marstek's servers</text>
+
+  <rect x="390" y="102" width="300" height="98" rx="11" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="540" y="130" font-size="14.5" font-weight="600" fill="#0f172a" text-anchor="middle">Your DNS server</text>
+  <text x="540" y="155" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#1e40af" text-anchor="middle">marstekcloud.com  →  192.168.1.60</text>
+  <text x="540" y="176" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#1e40af" text-anchor="middle">hamedata.com      →  192.168.1.60</text>
+  <line x1="540" y1="202" x2="540" y2="248" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="4 4"/>
+
+  <rect x="60" y="212" width="215" height="126" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="167" y="248" font-size="15" font-weight="600" fill="#0f172a" text-anchor="middle">Marstek Venus</text>
+  <text x="167" y="272" font-size="13" fill="#475569" text-anchor="middle">unmodified, no settings</text>
+  <text x="167" y="289" font-size="13" fill="#475569" text-anchor="middle">to change</text>
+  <text x="167" y="316" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#64748b" text-anchor="middle">192.168.1.50</text>
+
+  <rect x="765" y="196" width="215" height="158" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="872" y="228" font-size="15" font-weight="600" fill="#0f172a" text-anchor="middle">Raspberry Pi</text>
+  <text x="872" y="248" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#64748b" text-anchor="middle">192.168.1.60</text>
+  <rect x="785" y="264" width="175" height="72" rx="9" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="872" y="290" font-size="12.5" font-weight="600" fill="#1e40af" text-anchor="middle">this container</text>
+  <text x="872" y="312" font-size="12.5" fill="#1d4ed8" text-anchor="middle">listening on 443 and 80</text>
+
+  <line x1="282" y1="252" x2="757" y2="252" stroke="#2563eb" stroke-width="2" marker-end="url(#b)"/>
+  <text x="520" y="234" font-size="13" fill="#1e40af" text-anchor="middle">uploads its telemetry, every five minutes</text>
+
+  <line x1="757" y1="300" x2="284" y2="300" stroke="#16a34a" stroke-width="2" marker-end="url(#g)"/>
+  <text x="520" y="322" font-size="13" fill="#15803d" text-anchor="middle">the reply the firmware is waiting for — so the reset never fires</text>
+
+  <path d="M150 344 C150 392 240 404 318 408" fill="none" stroke="#cbd5e1" stroke-width="1.8" stroke-dasharray="6 5"/>
+  <g stroke="#94a3b8" stroke-width="2.4" stroke-linecap="round">
+    <line x1="212" y1="376" x2="230" y2="394"/>
+    <line x1="230" y1="376" x2="212" y2="394"/>
+  </g>
+
+  <rect x="325" y="382" width="250" height="60" rx="11" fill="#f1f5f9" stroke="#e2e8f0" stroke-dasharray="5 4"/>
+  <text x="450" y="409" font-size="13.5" font-weight="600" fill="#94a3b8" text-anchor="middle">Marstek cloud</text>
+  <text x="450" y="429" font-size="12.5" fill="#94a3b8" text-anchor="middle">never contacted</text>
+
+  <text x="620" y="412" font-size="13" fill="#64748b">Your measurements stay on the Pi, one JSONL file per day.</text>
+  <text x="620" y="432" font-size="13" fill="#64748b">Nothing on the battery is modified.</text>
+</svg>

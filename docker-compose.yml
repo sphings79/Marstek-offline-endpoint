@@ -5,17 +5,23 @@ services:
     # Or build it yourself:
     # build: .
     container_name: marstek-offline-endpoint
+    # Comes back after a host reboot, provided Docker itself starts at boot:
+    #   sudo systemctl enable docker
     restart: unless-stopped
     ports:
-      - "443:443"
-      - "80:80"
-      - "8883:8883"   # MQTT connection probe (log only)
+      - "443:443"       # the telemetry upload
+      - "80:80"         # the time endpoint
+      # MQTT connection probe, log only. Leave the broker's hostname alone in
+      # normal operation — see README, "What it does not do".
+      - "8883:8883"
     volumes:
       - ./data:/data      # one JSONL per day: everything the device sent
       - ./certs:/certs    # self-signed certificate, generated on first start
     environment:
+      # Which local time the device's clock is set to. Set this — the real
+      # endpoint answers in the device's local time, and without it the
+      # container's idea of local time is UTC.
+      - TZ=Europe/Berlin
       # Answer every request with {"code":0}, not just the telemetry upload.
       # Off by default — see README before switching this on.
       - ACCEPT_ALL=0
-      # Timezone the device's clock is set to
-      - TZ=Europe/Berlin

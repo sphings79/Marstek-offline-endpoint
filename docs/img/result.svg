@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 360" width="1040" height="360" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <rect width="1040" height="360" fill="#f8fafc"/>
+  <text x="60" y="42" font-size="21" font-weight="600" fill="#0f172a">Same battery, same day, seven hours either side</text>
+  <text x="60" y="66" font-size="14" fill="#64748b">Each mark is the battery vanishing from the network — no Modbus, not even a ping reply</text>
+  <text x="60" y="110" font-size="15" font-weight="600" fill="#0f172a">Before</text>
+  <text x="60" y="129" font-size="13" fill="#64748b">the endpoint answered, but not the way the firmware expects</text>
+  <rect x="60" y="140" width="930" height="34" rx="6" fill="#ffffff" stroke="#e2e8f0"/>
+  <rect x="79.1" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="143.7" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="208.2" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="272.8" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="337.3" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="401.8" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="466.4" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="530.9" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="595.5" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="660.0" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="724.6" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="789.1" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="853.7" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="918.2" y="143" width="4" height="28" rx="2" fill="#dc2626"/>
+  <rect x="60" y="188" width="340" height="26" rx="13" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="74" y="206" font-size="13" font-weight="600" fill="#991b1b">a dropout every 1824 s, 14 in seven hours</text>
+
+  <text x="60" y="238" font-size="15" font-weight="600" fill="#0f172a">After</text>
+  <text x="60" y="257" font-size="13" fill="#64748b">the reply reproduces the real endpoint byte for byte</text>
+  <rect x="60" y="268" width="930" height="34" rx="6" fill="#ffffff" stroke="#e2e8f0"/>
+  <rect x="60" y="316" width="112" height="26" rx="13" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="74" y="334" font-size="13" font-weight="600" fill="#166534">none at all</text>
+
+</svg>
