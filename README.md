@@ -3,8 +3,9 @@
 **Deutsch: [README.de.md](README.de.md) · Step-by-step guide: [docs/SETUP.md](docs/SETUP.md) ([deutsch](docs/SETUP.de.md))**
 
 A small container for your home server that answers the telemetry upload a
-Marstek Venus expects. The battery stops resetting its own network chip every
-half hour, and none of your measurements leave your network.
+**Marstek Venus** battery expects — Venus E, Venus D, Venus E v3. The battery
+stops resetting its own network chip every half hour, Modbus TCP stays up, and
+none of your measurements leave your network.
 
 ![Before and after: a dropout every 1824 seconds, then none in seven hours](docs/img/result.svg)
 
@@ -12,6 +13,21 @@ Measured on a Venus D running Control firmware v150, over LAN, on 26 August 2026
 Before, the battery vanished from the network every 30 minutes on the dot. After,
 seven hours without a single one — and the upload settled into a metronomic
 300-second rhythm, one per record, which is what an empty buffer looks like.
+
+## Does this describe your problem?
+
+- Your Marstek Venus **disappears from the network every 30 minutes** for a few
+  seconds, then comes back
+- Home Assistant shows the battery as *unavailable* on a regular rhythm, and a
+  reload or a restart fixes it for a while
+- Modbus TCP times out periodically — `Cannot connect to Modbus device at …:502`,
+  `Timeout writing to register 0xA410`, `No response received after 0 retries`
+- Even **ping** to the battery stops answering, for two to five seconds
+- It started after updating to firmware **v150**, or it happens whenever the
+  battery cannot reach the internet
+
+If that is you: it is not your network, not your switch, and not your Modbus
+integration. It is the battery's own firmware — and this stops it.
 
 ## The problem
 
