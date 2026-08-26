@@ -434,6 +434,16 @@ verändert, es gibt dort also auch nichts rückgängig zu machen.
 
 ---
 
+---
+
+## Die Batterie in Home Assistant auslesen
+
+Dieser Container hält die Batterie im Netz. Um sie tatsächlich auszulesen —
+Leistung, Ladestand, Zellspannungen — brauchst du die Modbus-Integration:
+**<https://github.com/sphings79/marstek_venus_modbus_dev>**
+
+---
+
 ## Aktuell halten
 
 ```bash

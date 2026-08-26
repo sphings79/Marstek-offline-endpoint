@@ -49,6 +49,9 @@ battery to WiFi is not a way around it.
 
 If you keep your battery away from the internet, that is what you get.
 
+Full analysis with firmware addresses, conditions and the call chain:
+<https://github.com/sphings79/marstek_venus_modbus_dev/issues/2>
+
 ## What this does
 
 ![One DNS entry sends the battery to your own machine](docs/img/network.svg)
@@ -308,6 +311,21 @@ TLS here is deliberately permissive: versions 1.0–1.2 and `SECLEVEL=0`, becaus
 the device pins an older range in firmware and the exact values were not
 resolvable. That is fine for one embedded client on your LAN talking to a server
 that holds nothing of value. **Do not expose this container to the internet.**
+
+## Related projects
+
+- 🔌 **[Marstek Venus Modbus — dev fork](https://github.com/sphings79/marstek_venus_modbus_dev)** —
+  the Home Assistant integration that reads the battery over Modbus TCP. It cannot
+  prevent these dropouts, but it recovers from them in seconds instead of minutes,
+  and it raises a repair when the device drops out of RS485 control mode on its own.
+  Most people running this container want that too.
+  ([upstream](https://github.com/ViperRNMC/marstek_venus_modbus))
+- 🖥️ **[venuscontrol](https://github.com/sphings79/venuscontrol)** — cloud-free Web Bluetooth
+  control panel for Venus A / D, including OTA firmware updates
+- 🔬 **[Venus D firmware reverse engineering](https://github.com/sphings79/Marstek-Venus-D-Firmware-Reverse-Engineering)** —
+  where the analysis behind this container comes from
+- 📦 **[Marstek firmware archive](https://github.com/sphings79/marstek-firmware-archiv)**
+- 🌐 **[More projects and tools](https://sphings-dev.de/)**
 
 ## Licence
 

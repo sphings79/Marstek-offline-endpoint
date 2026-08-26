@@ -51,6 +51,9 @@ nicht die mildere** — ein Wechsel des Anschlusses hilft also nicht.
 
 Wer seine Batterie vom Internet fernhält, bekommt genau das.
 
+Vollständige Analyse mit Firmware-Adressen, Bedingungen und Aufrufkette:
+<https://github.com/sphings79/marstek_venus_modbus_dev/issues/2>
+
 ## Was dieser Container macht
 
 ![Zwei DNS-Einträge schicken die Batterie auf deinen eigenen Rechner](docs/img/network.svg)
@@ -327,6 +330,21 @@ TLS ist hier bewusst großzügig eingestellt: Versionen 1.0 bis 1.2 und
 die genauen Werte nicht auflösbar waren. Für einen eingebetteten Client im
 eigenen LAN, der mit einem Server ohne schützenswerten Inhalt spricht, ist das in
 Ordnung. **Setz diesen Container nicht ins Internet.**
+
+## Verwandte Projekte
+
+- 🔌 **[Marstek Venus Modbus — Dev-Fork](https://github.com/sphings79/marstek_venus_modbus_dev)** —
+  die Home-Assistant-Integration, die die Batterie über Modbus TCP ausliest. Sie kann
+  diese Ausfälle nicht verhindern, aber sie kommt in Sekunden statt Minuten zurück und
+  legt einen Reparatur-Eintrag an, wenn das Gerät von sich aus aus dem
+  RS485-Steuermodus fällt. Wer diesen Container betreibt, will das meistens auch.
+  ([Upstream](https://github.com/ViperRNMC/marstek_venus_modbus))
+- 🖥️ **[venuscontrol](https://github.com/sphings79/venuscontrol)** — cloudfreie
+  Web-Bluetooth-Steuerung für Venus A / D, inklusive OTA-Firmware-Updates
+- 🔬 **[Venus D Firmware Reverse Engineering](https://github.com/sphings79/Marstek-Venus-D-Firmware-Reverse-Engineering)** —
+  dort kommt die Analyse hinter diesem Container her
+- 📦 **[Marstek-Firmware-Archiv](https://github.com/sphings79/marstek-firmware-archiv)**
+- 🌐 **[Weitere Projekte und Werkzeuge](https://sphings-dev.de/)**
 
 ## Lizenz
 
