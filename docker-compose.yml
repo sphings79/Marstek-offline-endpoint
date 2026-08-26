@@ -1,6 +1,7 @@
 services:
   marstek-offline-endpoint:
-    # Prebuilt image (amd64 / arm64 / armv7 — works on a Raspberry Pi):
+    # Prebuilt image. Built for amd64, 386, arm64, armv7 and armv6 — so an old
+    # laptop, a NAS, any Raspberry Pi down to a Zero, all work:
     image: ghcr.io/sphings79/marstek-offline-endpoint:latest
     # Or build it yourself:
     # build: .

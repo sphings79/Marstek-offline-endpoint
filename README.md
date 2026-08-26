@@ -66,9 +66,9 @@ upload, in a JSONL file you own.
 
 ## Quick start
 
-A prebuilt image is published for **amd64, arm64 and armv7**, so it runs on a
-normal server and on a Raspberry Pi alike. A 3B is plenty — this answers a
-handful of requests per hour.
+A prebuilt image is published for **amd64, 386, arm64, armv7 and armv6**, so a
+normal server, an old 32-bit laptop, a NAS or any Raspberry Pi down to a Zero all
+work. A 3B is plenty — this answers a handful of requests per hour.
 
 ```bash
 docker run -d --name marstek-offline-endpoint --restart unless-stopped \

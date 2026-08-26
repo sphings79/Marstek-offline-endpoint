@@ -1,6 +1,7 @@
 # alpine + nodejs from the distro repos rather than node:*-alpine: the official
-# Node images do not publish every architecture, and a Raspberry Pi 3B running a
-# 32-bit Raspberry Pi OS needs linux/arm/v7.
+# Node images do not publish every architecture this needs -- a Raspberry Pi 3B on
+# 32-bit Raspberry Pi OS wants linux/arm/v7, a Pi Zero linux/arm/v6, and an old
+# 32-bit laptop linux/386. Alpine packages nodejs for all of them.
 FROM alpine:3.20
 
 RUN apk add --no-cache nodejs openssl tzdata

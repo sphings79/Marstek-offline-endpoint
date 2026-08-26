@@ -38,9 +38,11 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          # armv7 covers a Raspberry Pi 3B on 32-bit Raspberry Pi OS,
-          # arm64 the same board on the 64-bit image.
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          # amd64 for anything x86-64, including an old laptop. 386 for the
+          # genuinely 32-bit ones -- Core Duo era, Atom netbooks. armv7 covers a
+          # Raspberry Pi 3B on 32-bit Raspberry Pi OS, arm64 the same board on
+          # the 64-bit image, armv6 a Pi Zero or Pi 1.
+          platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7,linux/arm/v6
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
