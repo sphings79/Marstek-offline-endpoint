@@ -212,6 +212,34 @@ expected reply nobody has reverse-engineered could change device behaviour in
 untested ways. Watch the log first and decide deliberately. `ACCEPT_ALL=1`
 answers everything with `{"code":0}` if you want to experiment.
 
+## What this does not fix
+
+The 30-minute resets stop. **A second, smaller interruption does not**, and it is
+honest to say so before you set this up.
+
+Since firmware v150 the telemetry upload runs over TLS — v149.2 sent it in the
+clear to `hamedata.com`, v150 sends it to `api-eu.marstekcloud.com` over HTTPS,
+and the whole TLS session code is new in that release. Every upload therefore
+costs the device a key exchange, and on this MCU that takes about four seconds
+during which it stops serving Modbus. It keeps answering ping and ARP throughout,
+so it is easy to tell apart from a reset.
+
+Measured over 11.7 hours on a second device, after its buffer had drained:
+
+| | |
+|---|---|
+| Modbus gaps longer than 3.5 s | **141** — 12.0 per hour |
+| TLS handshakes in the same window | **141** |
+| gaps coinciding with a handshake | **141 of 141** |
+
+Twelve an hour is one per record, which is one per upload. Not a single
+unexplained gap — but also not a single upload without one.
+
+**So if your Modbus client's response timeout is under about 8 seconds, it will
+still log an error every five minutes.** Raising that timeout is the fix, and it
+is the only one available: this is the firmware doing arithmetic, and no endpoint
+can do it for it. It happens with the real cloud too.
+
 ## Keep it running — this matters more than it looks
 
 A record is added to the buffer every five minutes and removed only when an

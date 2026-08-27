@@ -225,6 +225,35 @@ ungetestete Weise ändern. Erst ins Log schauen, dann bewusst entscheiden. Mit
 `ACCEPT_ALL=1` wird alles mit `{"code":0}` beantwortet, falls du experimentieren
 willst.
 
+## Was das nicht behebt
+
+Die 30-Minuten-Resets hören auf. **Eine zweite, kleinere Unterbrechung nicht** —
+und das gehört gesagt, bevor du dir die Mühe machst.
+
+Seit Firmware v150 läuft der Telemetrie-Upload über TLS: v149.2 schickte ihn im
+Klartext an `hamedata.com`, v150 schickt ihn per HTTPS an
+`api-eu.marstekcloud.com`, und der gesamte TLS-Code ist neu in dieser Version.
+Jeder Upload kostet das Gerät damit einen Schlüsselaustausch, und der dauert auf
+diesem Mikrocontroller rund vier Sekunden — in denen es keinen Modbus bedient.
+Ping und ARP beantwortet es weiter, deshalb ist es von einem Reset gut zu
+unterscheiden.
+
+Gemessen über 11,7 Stunden an einem zweiten Gerät, nachdem dessen Puffer leer war:
+
+| | |
+|---|---|
+| Modbus-Lücken länger als 3,5 s | **141** — 12,0 pro Stunde |
+| TLS-Handshakes im selben Zeitraum | **141** |
+| Lücken, die mit einem Handshake zusammenfallen | **141 von 141** |
+
+Zwölf pro Stunde ist einer pro Datensatz, also einer pro Upload. Kein einziger
+unerklärter Ausfall — aber eben auch kein Upload ohne einen.
+
+**Liegt der Antwort-Timeout deines Modbus-Clients unter etwa 8 Sekunden, wirst du
+also weiterhin alle fünf Minuten einen Fehler protokollieren.** Den Timeout
+hochzusetzen ist die Abhilfe, und es ist die einzige: Hier rechnet die Firmware,
+und kein Endpunkt kann ihr das abnehmen. Mit der echten Cloud passiert dasselbe.
+
 ## Er muss laufen — wichtiger, als es aussieht
 
 Alle fünf Minuten kommt ein Datensatz in den Puffer, und er verschwindet erst,
