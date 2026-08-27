@@ -10,7 +10,9 @@ dein Netz.
 
 ![Vorher und nachher: alle 1824 Sekunden ein Ausfall, danach sieben Stunden keiner](docs/img/result.svg)
 
-Gemessen an einem Venus D mit Control-Firmware v150 über LAN, am 26. August 2026.
+Gemessen an einem Venus D mit Control-Firmware v150 über LAN, am 26. August 2026,
+und am Tag darauf an einem zweiten Gerät unabhängig bestätigt — 12,8 Stunden mit
+genau einer Netzunterbrechung, und das war der Neustart des Besitzers selbst.
 Vorher verschwand die Batterie im 30-Minuten-Takt aus dem Netz. Danach sieben
 Stunden lang kein einziges Mal — und der Upload pendelte sich auf exakt 300
 Sekunden ein, einen pro Datensatz. Genau so sieht ein leerer Puffer aus.

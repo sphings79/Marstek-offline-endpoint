@@ -9,7 +9,9 @@ none of your measurements leave your network.
 
 ![Before and after: a dropout every 1824 seconds, then none in seven hours](docs/img/result.svg)
 
-Measured on a Venus D running Control firmware v150, over LAN, on 26 August 2026.
+Measured on a Venus D running Control firmware v150, over LAN, on 26 August 2026,
+and independently confirmed on a second device the following day — 12.8 hours
+with exactly one network interruption, which was that owner's own reboot.
 Before, the battery vanished from the network every 30 minutes on the dot. After,
 seven hours without a single one — and the upload settled into a metronomic
 300-second rhythm, one per record, which is what an empty buffer looks like.

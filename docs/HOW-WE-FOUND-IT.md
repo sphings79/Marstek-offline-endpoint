@@ -191,11 +191,12 @@ With the corrected container in place:
   Kong headers were added on the reasoning that a difference which looked equally
   harmless had already proven decisive once. That is a judgement, not a
   measurement.
-- **The second reset trigger.** Two dropouts after the fix came 1293 s and 1052 s
-  apart — shorter than 1800 s, which this mechanism cannot produce, and one of
-  them landed four minutes after a container restart. Something else can also
-  reset that chip. `CH395_Reset_And_Reinit` has other callers, two of them thin
-  wrappers reached through function tables Ghidra has not resolved.
+- ~~**The second reset trigger.**~~ **Resolved.** Two dropouts shortly after the
+  fix came 1293 s and 1052 s apart, shorter than the 1800 s floor this mechanism
+  has to obey. Both fell in the window where the container was being restarted
+  repeatedly; one landed four minutes after a restart. Left alone for more than a
+  day since, there have been none at all. It was our own interference, not a
+  second trigger.
 
 ## The lesson worth keeping
 
