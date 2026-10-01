@@ -255,10 +255,47 @@ Measured over 11.7 hours on a second device, after its buffer had drained:
 Twelve an hour is one per record, which is one per upload. Not a single
 unexplained gap — but also not a single upload without one.
 
-**So if your Modbus client's response timeout is under about 8 seconds, it will
-still log an error every five minutes.** Raising that timeout is the fix, and it
+**So if your Modbus client's response timeout is under 6 seconds, it will still
+log an error every five minutes.** Raising that timeout is the fix, and it
 is the only one available: this is the firmware doing arithmetic, and no endpoint
 can do it for it. It happens with the real cloud too.
+
+### Where those four seconds actually go
+
+A header-only packet capture at the receiving end, one upload, times relative to
+the SYN:
+
+```
+ +0.000 s  device  SYN                            TCP established in 1 ms
+ +0.041 s  device  ClientHello              78 B
+ +0.066 s  server  ServerHello, Certificate,
+                   ServerKeyExchange, Done  1339 B
+ +0.516 s  device  ACK
+                   -- 4.22 s of silence --
+ +4.740 s  device  ClientKeyExchange        75 B
+ +4.784 s  device  ChangeCipherSpec, Finished
+ +4.982 s  device  POST                    988 B
+ +4.986 s  server  response                511 B
++25.06  s  device  FIN
++294.02 s  device  next upload, new connection
+```
+
+The gap sits between the server's flight and the ClientKeyExchange. The device
+has everything it needs at that point and is simply computing — certificate,
+signature check, ECDHE key pair, shared secret. The server answers in
+milliseconds; it contributes nothing.
+
+Two details worth knowing. The connection lingers **twenty seconds** after the
+response before the device closes it, and it is never reused: the next upload
+starts a new session from scratch. And the same device fetches the time every
+ten minutes from the same server over plain HTTP on port 80 — same chip, same
+task, same code path — with no measurable effect on Modbus at all. That is the
+control: it is the handshake, not the network chip.
+
+Measured on two Venus D units, the stall is 4.1 to 4.4 seconds, with one 4.8 s
+outlier across a night. Six seconds covers all of that with a second to spare,
+and costs nothing in normal operation: it only ever applies to a request the
+device is not answering anyway.
 
 ## Keep it running — this matters more than it looks
 

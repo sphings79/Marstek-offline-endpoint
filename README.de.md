@@ -268,10 +268,47 @@ Gemessen über 11,7 Stunden an einem zweiten Gerät, nachdem dessen Puffer leer 
 Zwölf pro Stunde ist einer pro Datensatz, also einer pro Upload. Kein einziger
 unerklärter Ausfall — aber eben auch kein Upload ohne einen.
 
-**Liegt der Antwort-Timeout deines Modbus-Clients unter etwa 8 Sekunden, wirst du
-also weiterhin alle fünf Minuten einen Fehler protokollieren.** Den Timeout
+**Liegt der Antwort-Timeout deines Modbus-Clients unter 6 Sekunden, wirst du also
+weiterhin alle fünf Minuten einen Fehler protokollieren.** Den Timeout
 hochzusetzen ist die Abhilfe, und es ist die einzige: Hier rechnet die Firmware,
 und kein Endpunkt kann ihr das abnehmen. Mit der echten Cloud passiert dasselbe.
+
+### Wo die vier Sekunden wirklich liegen
+
+Ein Mitschnitt der Paketköpfe am Empfänger, ein Upload, Zeiten relativ zum SYN:
+
+```
+ +0,000 s  Gerät   SYN                            TCP steht nach 1 ms
+ +0,041 s  Gerät   ClientHello              78 B
+ +0,066 s  Server  ServerHello, Certificate,
+                   ServerKeyExchange, Done  1339 B
+ +0,516 s  Gerät   ACK
+                   -- 4,22 s Stille --
+ +4,740 s  Gerät   ClientKeyExchange        75 B
+ +4,784 s  Gerät   ChangeCipherSpec, Finished
+ +4,982 s  Gerät   POST                    988 B
+ +4,986 s  Server  Antwort                 511 B
++25,06  s  Gerät   FIN
++294,02 s  Gerät   nächster Upload, neue Verbindung
+```
+
+Die Lücke sitzt zwischen dem Serverflug und dem ClientKeyExchange. Das Gerät hat
+zu diesem Zeitpunkt alles beisammen und rechnet nur noch — Zertifikat,
+Signaturprüfung, ECDHE-Schlüsselpaar, gemeinsames Geheimnis. Der Server
+antwortet in Millisekunden und trägt nichts dazu bei.
+
+Zwei Details am Rande. Die Verbindung bleibt nach der Antwort noch **zwanzig
+Sekunden** offen, bevor das Gerät sie schließt — und sie wird nie
+wiederverwendet: Der nächste Upload baut die Sitzung wieder von Null auf. Und
+dasselbe Gerät holt alle zehn Minuten die Zeit vom selben Server, über einfaches
+HTTP auf Port 80, gleicher Chip, gleiche Task, gleicher Codepfad — ohne jede
+messbare Wirkung auf Modbus. Das ist die Gegenprobe: Es ist der Handshake, nicht
+der Netzwerkchip.
+
+An zwei Venus D gemessen liegt die Pause bei 4,1 bis 4,4 Sekunden, mit einem
+Ausreißer von 4,8 s über eine Nacht. Sechs Sekunden decken das mit einer Sekunde
+Luft ab und kosten im Normalbetrieb nichts: Sie greifen nur bei einem Request,
+den das Gerät ohnehin nicht beantwortet.
 
 ## Er muss laufen — wichtiger, als es aussieht
 
