@@ -371,7 +371,7 @@ Ordnung. **Setz diesen Container nicht ins Internet.**
   legt einen Reparatur-Eintrag an, wenn das Gerät von sich aus aus dem
   RS485-Steuermodus fällt. Wer diesen Container betreibt, will das meistens auch.
   ([Upstream](https://github.com/ViperRNMC/marstek_venus_modbus))
-- 🖥️ **[marstek-ble-control](https://github.com/sphings79/marstek-ble-control)** — cloudfreie
+- 🖥️ **[Marstek BLE Control](https://github.com/sphings79/marstek-ble-control)** — cloudfreie
   Web-Bluetooth-Steuerung für Venus A / D / E, inklusive OTA-Firmware-Updates
 - 🔬 **[Venus Firmware Reverse Engineering](https://github.com/sphings79/Marstek-Venus-Firmware-Reverse-Engineering)** —
   dort kommt die Analyse hinter diesem Container her

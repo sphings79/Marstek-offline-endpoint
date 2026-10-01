@@ -350,7 +350,7 @@ that holds nothing of value. **Do not expose this container to the internet.**
   and it raises a repair when the device drops out of RS485 control mode on its own.
   Most people running this container want that too.
   ([upstream](https://github.com/ViperRNMC/marstek_venus_modbus))
-- 🖥️ **[marstek-ble-control](https://github.com/sphings79/marstek-ble-control)** — cloud-free Web Bluetooth
+- 🖥️ **[Marstek BLE Control](https://github.com/sphings79/marstek-ble-control)** — cloud-free Web Bluetooth
   control panel for Venus A / D / E, including OTA firmware updates
 - 🔬 **[Venus firmware reverse engineering](https://github.com/sphings79/Marstek-Venus-Firmware-Reverse-Engineering)** —
   where the analysis behind this container comes from
