@@ -182,6 +182,14 @@ With the corrected container in place:
 23:26:39   +1836   nothing for seven hours
 ```
 
+## Update: firmware v151 (2026-10-01)
+
+*Read from the decompiled code; not measured on a v151 device.* The watchdog this document is about was changed in v151.
+The chip reset after 1800 s is gone; v151 reboots the controller after 14 400 s (four hours) in which the backlog never fell below five
+records, with the inverter output switched off during the reboot. The upload URL, the success test (`"code":0` in the response) and
+the handling of the record are unchanged, so the endpoint described here keeps the backlog empty on v151 as well. Not checked: the
+WiFi (Quectel) upload path, whose send routine was rewritten in v151.
+
 ## What is still not established
 
 - **Which header the firmware objects to.** The container reproduces all of them.

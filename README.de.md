@@ -56,6 +56,23 @@ Wer seine Batterie vom Internet fernhält, bekommt genau das.
 Vollständige Analyse mit Firmware-Adressen, Bedingungen und Aufrufkette:
 <https://github.com/sphings79/marstek-modbus-suite/issues/2>
 
+## Firmware v151: aus dem Reset wurde ein Neustart
+
+*Aus dem dekompilierten Firmware-Code (Control v150 gegen v151). An einem v151-Gerät noch nicht gemessen.*
+
+v151 setzt den Netzwerkchip nicht mehr alle 30 Minuten zurück, sondern greift härter durch: Bleiben fünf oder mehr
+Telemetrie-Einträge **vier Stunden lang ohne einen einzigen Erfolg** unversendet, **startet die Steuerung neu**, und der
+Wechselrichterausgang ist während des Neustarts aus — auch im Notstrombetrieb. Bei nicht erreichbarer Cloud ist das etwa
+4 h 25 min nach dem letzten erfolgreichen Upload so weit, und es wiederholt sich.
+
+Dieser Endpoint verhindert das wie bisher: Er quittiert jeden Upload mit `{"code":0}`, der Puffer läuft nie voll, und die
+Vier-Stunden-Bedingung kann nicht eintreten. Upload-Pfad und Antwort-Parser sind in v150 und v151 identisch, und die eine
+Host-Änderung in v151 (`getDateInfo` wanderte zu `api-<region>.marstekcloud.com`) ist durch die DNS-Einträge der Anleitung abgedeckt.
+
+**Nicht** geprüft: der WLAN-(FC41D-)Uploadpfad, dessen Senderoutine in v151 neu geschrieben wurde. Und die Angaben 30 Minuten /
+15 Minuten weiter oben beschreiben nur v150. Wer eine v151-Batterie vom Internet fernhält, sollte diesen Endpoint betreiben — oder
+alle paar Stunden einen Neustart in Kauf nehmen. Hintergrund und Code: [Issue 2](https://github.com/sphings79/marstek-modbus-suite/issues/2).
+
 ## Was dieser Container macht
 
 ![Zwei DNS-Einträge schicken die Batterie auf deinen eigenen Rechner](docs/img/network.svg)

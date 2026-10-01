@@ -54,6 +54,24 @@ If you keep your battery away from the internet, that is what you get.
 Full analysis with firmware addresses, conditions and the call chain:
 <https://github.com/sphings79/marstek-modbus-suite/issues/2>
 
+## Firmware v151: the reset became a reboot
+
+*From the decompiled firmware code (Control v150 vs v151). Not yet measured on a v151 device.*
+
+v151 no longer resets the network chip every 30 minutes. It replaced that with something harsher: if five or more
+telemetry records stay unsent **for four hours without a single success**, the controller **reboots**, and the
+inverter output is switched off during that reboot — also in backup operation. With the cloud unreachable that is about
+4 h 25 min after the last successful upload, and it repeats.
+
+This endpoint prevents it the same way as before. It acknowledges every upload with `{"code":0}`, so the buffer never
+builds up and the four-hour condition cannot become true. The upload path and the response parser are identical in v150 and
+v151, and the one host change in v151 (`getDateInfo` moved to `api-<region>.marstekcloud.com`) is covered by the DNS
+entries in the setup guide.
+
+What is **not** checked: the WiFi (FC41D) upload path, whose send routine was rewritten in v151. And the 30-minute / 15-minute
+figures above describe v150 only. If you keep a v151 battery away from the internet, run this endpoint — or accept a reboot
+every few hours. Background and code: [issue 2](https://github.com/sphings79/marstek-modbus-suite/issues/2).
+
 ## What this does
 
 ![One DNS entry sends the battery to your own machine](docs/img/network.svg)

@@ -10,6 +10,10 @@ Roughly 45 minutes, most of it waiting for downloads.
 
 ---
 
+> **Firmware v151:** the 30-minute chip reset described here is v150 behaviour. v151 instead **reboots the controller** (inverter
+> output off) after four hours in which five or more uploads stayed unsent. This endpoint prevents that in the same way; the
+> upload path is unchanged in v151 (read from the code, not yet measured on a v151 device). See the README section "Firmware v151".
+
 ## What you need
 
 - **A Raspberry Pi**, model 3B or newer. Anything that stays on works — an old

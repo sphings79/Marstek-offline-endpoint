@@ -11,6 +11,10 @@ Etwa 45 Minuten, das meiste davon Warten auf Downloads.
 
 ---
 
+> **Firmware v151:** Der hier beschriebene 30-Minuten-Chip-Reset ist das Verhalten von v150. v151 **startet stattdessen die Steuerung neu**
+> (Wechselrichterausgang aus), wenn vier Stunden lang fünf oder mehr Uploads unversendet blieben. Dieser Endpoint verhindert das auf dieselbe
+> Weise; der Upload-Pfad ist in v151 unverändert (aus dem Code gelesen, an einem v151-Gerät noch nicht gemessen). Siehe README-Abschnitt „Firmware v151".
+
 ## Was du brauchst
 
 - **Einen Raspberry Pi**, Modell 3B oder neuer. Es geht alles, was dauerhaft
