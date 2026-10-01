@@ -52,7 +52,7 @@ battery to WiFi is not a way around it.
 If you keep your battery away from the internet, that is what you get.
 
 Full analysis with firmware addresses, conditions and the call chain:
-<https://github.com/sphings79/marstek_venus_modbus_dev/issues/2>
+<https://github.com/sphings79/marstek-modbus-suite/issues/2>
 
 ## What this does
 
@@ -344,15 +344,15 @@ that holds nothing of value. **Do not expose this container to the internet.**
 
 ## Related projects
 
-- 🔌 **[Marstek Venus Modbus — dev fork](https://github.com/sphings79/marstek_venus_modbus_dev)** —
+- 🔌 **[Marstek Modbus Suite](https://github.com/sphings79/marstek-modbus-suite)** —
   the Home Assistant integration that reads the battery over Modbus TCP. It cannot
   prevent these dropouts, but it recovers from them in seconds instead of minutes,
   and it raises a repair when the device drops out of RS485 control mode on its own.
   Most people running this container want that too.
   ([upstream](https://github.com/ViperRNMC/marstek_venus_modbus))
-- 🖥️ **[venuscontrol](https://github.com/sphings79/venuscontrol)** — cloud-free Web Bluetooth
-  control panel for Venus A / D, including OTA firmware updates
-- 🔬 **[Venus D firmware reverse engineering](https://github.com/sphings79/Marstek-Venus-D-Firmware-Reverse-Engineering)** —
+- 🖥️ **[marstek-ble-control](https://github.com/sphings79/marstek-ble-control)** — cloud-free Web Bluetooth
+  control panel for Venus A / D / E, including OTA firmware updates
+- 🔬 **[Venus firmware reverse engineering](https://github.com/sphings79/Marstek-Venus-Firmware-Reverse-Engineering)** —
   where the analysis behind this container comes from
 - 📦 **[Marstek firmware archive](https://github.com/sphings79/marstek-firmware-archiv)**
 - 🌐 **[More projects and tools](https://sphings-dev.de/)**

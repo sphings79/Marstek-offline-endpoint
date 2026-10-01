@@ -430,7 +430,7 @@ changed, so there is nothing on it to undo.
 
 This container keeps the battery on the network. To actually read it — power,
 state of charge, per-cell voltages — you want the Modbus integration:
-**<https://github.com/sphings79/marstek_venus_modbus_dev>**
+**<https://github.com/sphings79/marstek-modbus-suite>**
 
 ---
 
