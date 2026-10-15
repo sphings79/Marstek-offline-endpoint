@@ -15,6 +15,10 @@ services:
       # MQTT connection probe, log only. Leave the broker's hostname alone in
       # normal operation — see README, "What it does not do".
       - "8883:8883"
+      # Web interface (devices, history, settings). Own login, set up with the code
+      # in the container log. See docs/WEB-INTERFACE.md. Remove this line to switch
+      # it off from the outside; to run it behind a reverse proxy see the same page.
+      - "8443:8443"
     volumes:
       - ./data:/data      # one JSONL per day: everything the device sent
       - ./certs:/certs    # self-signed certificate, generated on first start

@@ -32,6 +32,9 @@
  * Node core modules only — no dependencies to audit.
  */
 
+// remember the console output for the support package (before anything is printed)
+require('./logbuf.cjs').capture();
+
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -44,6 +47,17 @@ const HTTP_PORT = Number(process.env.HTTP_PORT || 80);
 const LOG_DIR = process.env.LOG_DIR || '/data';
 const CERT_DIR = process.env.CERT_DIR || '/certs';
 const MAX_BODY = Number(process.env.MAX_BODY || 256 * 1024);
+
+// Connection log: one CONN line per TCP connection, when it closes -- how long it
+// lived, whether the TLS handshake finished, and how many requests it carried.
+// This is what shows an attempt that never turns into an ACCEPT line.
+const LOG_CONNECTIONS = process.env.LOG_CONNECTIONS !== '0';
+// Add TLS version, cipher and handshake time to the CONN line (https only).
+const LOG_HANDSHAKE = process.env.LOG_HANDSHAKE !== '0';
+
+// The web interface (web.cjs) is started after the certificate is loaded. Until
+// then, and when WEB_PORT=0, this stays null and nothing is reported to it.
+let web = null;
 
 // The one endpoint the watchdog depends on. Everything else is logged but not
 // answered with a success code — pretending to be an endpoint whose expected
@@ -310,6 +324,63 @@ function logRequest(record) {
   });
 }
 
+// --- connection tracking ----------------------------------------------------
+// Keyed by "ip:port": the raw TCP socket, the TLS socket and the request's
+// socket all report the same remote address and port.
+const connState = new Map();
+const connKey = (s) => `${s.remoteAddress}:${s.remotePort}`;
+
+function trackConnections(server, scheme) {
+  server.on('connection', (socket) => {
+    const key = connKey(socket);
+    const c = {
+      start: Date.now(),
+      remote: socket.remoteAddress,
+      hsMs: null,
+      proto: null,
+      cipher: null,
+      tlsError: null,
+      sockError: null,
+      requests: 0,
+    };
+    connState.set(key, c);
+    socket.on('error', (e) => {
+      c.sockError = e.code || e.message;
+    });
+    socket.on('close', (hadError) => {
+      if (connState.get(key) === c) connState.delete(key);
+      if (!LOG_CONNECTIONS) return;
+      const ms = Date.now() - c.start;
+      let outcome;
+      if (c.tlsError) outcome = `handshake FAILED (${c.tlsError})`;
+      else if (scheme === 'https' && c.hsMs === null) outcome = 'closed before the handshake finished';
+      else if (c.requests === 0) outcome = 'closed without a request';
+      else outcome = `${c.requests} request(s)`;
+      if (c.sockError) outcome += `, socket ${c.sockError}`;
+      const tls =
+        LOG_HANDSHAKE && c.hsMs !== null ? ` | ${c.proto} ${c.cipher}, handshake ${c.hsMs} ms` : '';
+      console.log(
+        `${stamp()} CONN   ${scheme} from ${c.remote} ${(ms / 1000).toFixed(1)} s: ${outcome}${tls}`
+      );
+      if (web) web.noteConnection({ remote: c.remote, handshakeMs: c.hsMs, tlsError: c.tlsError });
+      logRequest({
+        ts: new Date().toISOString(),
+        scheme,
+        kind: 'connection',
+        remote: c.remote,
+        durationMs: ms,
+        handshakeMs: c.hsMs,
+        protocol: c.proto || undefined,
+        cipher: c.cipher || undefined,
+        tlsError: c.tlsError || undefined,
+        socketError: c.sockError || undefined,
+        requests: c.requests,
+        hadError,
+      });
+    });
+  });
+}
+
 function handle(scheme) {
   return (req, res) => {
     const chunks = [];
@@ -326,6 +397,8 @@ function handle(scheme) {
     });
 
     req.on('end', () => {
+      const conn = connState.get(connKey(req.socket));
+      if (conn) conn.requests += 1;
       const raw = Buffer.concat(chunks).toString('utf8');
       const isUpload = UPLOAD_PATH.test(req.url || '');
       const isTime = ANSWER_TIME && TIME_PATH.test(req.url || '');
@@ -352,6 +425,10 @@ function handle(scheme) {
         answeredWith: isTime ? 'time' : accept ? 'code0' : undefined,
         body,
       });
+
+      if (web && (isUpload || isTime)) {
+        web.noteRequest({ url: req.url, remote: req.socket.remoteAddress, ts: new Date().toISOString(), bytes: size, body });
+      }
 
       const tag = isTime ? 'TIME  ' : accept ? 'ACCEPT' : 'log   ';
       console.log(
@@ -479,29 +556,79 @@ if (MQTT_PORT > 0) {
 const key = fs.readFileSync(path.join(CERT_DIR, 'server.key'));
 const cert = fs.readFileSync(path.join(CERT_DIR, 'server.crt'));
 
-https
-  .createServer(
-    {
-      key,
-      cert,
-      // The device pins its TLS min/max version in firmware and the exact values
-      // were not resolvable from the image, so accept the whole 1.0–1.2 range.
-      // SECLEVEL=0 allows the older cipher suites an mbedTLS build of that
-      // vintage offers. This server talks to one embedded client on the LAN and
-      // serves nothing worth attacking — but do not expose it to the internet.
-      minVersion: 'TLSv1',
-      maxVersion: 'TLSv1.2',
-      ciphers: 'DEFAULT:@SECLEVEL=0',
-    },
-    handle('https')
-  )
-  .listen(HTTPS_PORT, () => console.log(`https listening on :${HTTPS_PORT}`));
+// The web interface runs in a process of its own (webproc.cjs), supervised from here, so that updating or
+// restarting it never interrupts the answers to the batteries. WEB_PORT=0 switches it off.
+if (Number(process.env.WEB_PORT ?? 8443)) {
+  web = require('./supervisor.cjs').start({ dataDir: LOG_DIR, log: (line) => console.log(`${stamp()} ${line}`) });
+} else {
+  console.log(`${stamp()} web   interface off (WEB_PORT=0)`);
+}
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, async () => {
+    if (web) await web.shutdown();
+    process.exit(0);
+  });
+}
+
+const httpsServer = https.createServer(
+  {
+    key,
+    cert,
+    // The device pins its TLS min/max version in firmware and the exact values
+    // were not resolvable from the image, so accept the whole 1.0–1.2 range.
+    // SECLEVEL=0 allows the older cipher suites an mbedTLS build of that
+    // vintage offers. This server talks to one embedded client on the LAN and
+    // serves nothing worth attacking — but do not expose it to the internet.
+    minVersion: 'TLSv1',
+    maxVersion: 'TLSv1.2',
+    ciphers: 'DEFAULT:@SECLEVEL=0',
+  },
+  handle('https')
+);
+
+trackConnections(httpsServer, 'https');
+
+httpsServer.on('secureConnection', (tlsSocket) => {
+  const c = connState.get(connKey(tlsSocket));
+  if (!c) return;
+  c.hsMs = Date.now() - c.start;
+  c.proto = tlsSocket.getProtocol();
+  c.cipher = (tlsSocket.getCipher() || {}).name || null;
+});
+
+// Without a listener Node drops a failed handshake silently. This is the only
+// place such an attempt becomes visible.
+httpsServer.on('tlsClientError', (err, tlsSocket) => {
+  const code = err.code || err.message;
+  // After an aborted handshake the TLS socket no longer knows its peer, the raw
+  // socket underneath still does.
+  const sock = tlsSocket && (tlsSocket._parent || tlsSocket);
+  const c = sock && sock.remoteAddress ? connState.get(connKey(sock)) : undefined;
+  if (c) c.tlsError = code;
+  const remote = (sock && sock.remoteAddress) || (c && c.remote) || '-';
+  const afterMs = c ? Date.now() - c.start : null;
+  if (web) web.noteTlsError({ remote, code });
+  console.log(
+    `${stamp()} TLSERR https from ${remote}${afterMs === null ? '' : ` after ${afterMs} ms`}: ${code} (${err.message})`
+  );
+  logRequest({
+    ts: new Date().toISOString(),
+    scheme: 'https',
+    kind: 'tls-error',
+    remote,
+    afterMs,
+    code,
+    message: err.message,
+  });
+});
+
+httpsServer.listen(HTTPS_PORT, () => console.log(`https listening on :${HTTPS_PORT}`));
 
 // The older hamedata endpoints are plain http. Logged only, so you can see what
 // else your device asks for.
-http
-  .createServer(handle('http'))
-  .listen(HTTP_PORT, () => console.log(`http  listening on :${HTTP_PORT}`));
+const httpServer = http.createServer(handle('http'));
+trackConnections(httpServer, 'http');
+httpServer.listen(HTTP_PORT, () => console.log(`http  listening on :${HTTP_PORT}`));
 
 console.log(`upload endpoint answered: ${UPLOAD_PATH}`);
 console.log(
@@ -513,4 +640,8 @@ console.log(
       : 'time endpoint answered:   no (ANSWER_TIME=0)'
 );
 console.log(`accept everything: ${ACCEPT_ALL ? 'yes (ACCEPT_ALL=1)' : 'no'}`);
+console.log(
+  `connection log: ${LOG_CONNECTIONS ? 'on' : 'off (LOG_CONNECTIONS=0)'}, ` +
+    `handshake details: ${LOG_HANDSHAKE ? 'on' : 'off (LOG_HANDSHAKE=0)'}`
+);
 console.log(`logs: ${LOG_DIR}`);

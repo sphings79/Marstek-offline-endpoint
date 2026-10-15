@@ -35,9 +35,16 @@ jobs:
             type=ref,event=tag
             type=sha,format=short
 
+      # vX.Y.Z for a release tag, dev+<short commit> for a build of main
+      - id: ver
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"; else echo "value=dev+${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"; fi
+
       - uses: docker/build-push-action@v6
         with:
           context: .
+          build-args: |
+            APP_VERSION=${{ steps.ver.outputs.value }}
           # amd64 for anything x86-64, including an old laptop. 386 for the
           # genuinely 32-bit ones -- Core Duo era, Atom netbooks. armv7 covers a
           # Raspberry Pi 3B on 32-bit Raspberry Pi OS, arm64 the same board on

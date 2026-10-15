@@ -212,6 +212,30 @@ Only fields confirmed against a second source — the same device read over Modb
 at the same moment — are given a meaning; the rest is printed raw rather than
 guessed at. Device ID, serial and IP are redacted unless you pass `--no-redact`.
 
+## Web interface
+
+A small web interface lives in the same container, on port 8443: which batteries
+talk to it and how punctually, a chart per device with ping and TLS handshakes,
+whether the **endpoint itself** was up when something went missing, the decoded
+measurements in a small SQLite database (with names and units you can edit, per model and firmware),
+notifications (Telegram, Pushover, Home Assistant, webhook) when uploads go missing or a new version
+appears, health values and, if you like, the measurements for Home Assistant over MQTT, and a support
+package for bug reports. The web side runs as its own process and can be updated from signed GitHub
+releases without restarting the part that answers the batteries. Light and dark theme, phone layout included.
+
+![Device page, light and dark](docs/img/web/desktop-device.png)
+
+![Measurements, light and dark](docs/img/web/desktop-measurements.png)
+
+| | | |
+|---|---|---|
+| ![Devices on a phone](docs/img/web/phone-overview.png) | ![Measurements on a phone](docs/img/web/phone-measurements.png) | ![Menu on a phone](docs/img/web/phone-menu.png) |
+
+First start: read the setup code with `docker logs marstek-offline-endpoint 2>&1 | grep SETUP`,
+open `https://<host>:8443/` and choose a password. All details, the reverse-proxy
+setup and the macvlan catch are in **[docs/WEB-INTERFACE.md](docs/WEB-INTERFACE.md)**.
+How to check a new control firmware against the measurement keys: **[docs/NEW-FIRMWARE.md](docs/NEW-FIRMWARE.md)**.
+
 ## What it does not do
 
 **MQTT is not served, and cannot be.** The device keeps an MQTT session with AWS
@@ -328,6 +352,12 @@ than a WAN dependency.
 | `LOG_DIR` | `/data` | one JSONL file per day |
 | `CERT_DIR` | `/certs` | certificate and key |
 | `MAX_BODY` | `262144` | bytes kept per request |
+| `WEB_PORT` | `8443` | port of the [web interface](docs/WEB-INTERFACE.md) |
+| `WEB_TLS` | `1` | `0` serves the interface as plain HTTP, for use behind a proxy |
+| `BASE_PATH` | — | serve the interface under a prefix, e.g. `/endpoint` |
+| `TRUST_PROXY` | — | proxies whose `X-Forwarded-*` headers are believed, e.g. `172.18.0.0/16` |
+| `PING` | `1` | `0` turns off the device ping and the gateway check |
+| `ENDPOINT_GATEWAY` | — | address for the network check instead of the devices' gateway |
 | `PROXY_TIME_IP` | — | diagnostic: forward the *time* request upstream and return its answer verbatim |
 | `PROXY_TIME_HOST` | `eu.hamedata.com` | Host header used when proxying |
 | `PROXY_TIME_PORT` | `80` | upstream port |

@@ -222,6 +222,31 @@ Gerät im selben Moment über Modbus gelesen. Der Rest wird roh ausgegeben statt
 geraten. Geräte-ID, Seriennummer und IP werden maskiert, außer du gibst
 `--no-redact` an.
 
+## Weboberfläche
+
+Im selben Container steckt eine kleine Weboberfläche auf Port 8443: welche
+Batterien sich melden und wie pünktlich, eine Grafik je Gerät mit Ping und
+TLS-Handshakes, ob der **Endpoint selbst** lief, als etwas fehlte, die entschlüsselten
+Messwerte in einer kleinen SQLite-Datenbank (mit Namen und Einheiten, die du ändern kannst, je Modell und Firmware),
+Benachrichtigungen (Telegram, Pushover, Home Assistant, Webhook), wenn Uploads ausbleiben oder eine neue Version
+erscheint, Gesundheitswerte und auf Wunsch die Messwerte für Home Assistant per MQTT und ein Support-Paket für
+Fehlermeldungen. Die Web-Seite läuft als eigener Prozess und lässt sich aus signierten GitHub-Releases aktualisieren,
+ohne den Teil neu zu starten, der die Batterien beantwortet. Heller und dunkler Modus, Handy-Layout inklusive.
+
+![Geräteseite, hell und dunkel](docs/img/web/desktop-device.png)
+
+![Messwerte, hell und dunkel](docs/img/web/desktop-measurements.png)
+
+| | | |
+|---|---|---|
+| ![Geräte auf dem Handy](docs/img/web/phone-overview.png) | ![Messwerte auf dem Handy](docs/img/web/phone-measurements.png) | ![Menü auf dem Handy](docs/img/web/phone-menu.png) |
+
+Erster Start: Einrichtungscode mit `docker logs marstek-offline-endpoint 2>&1 | grep SETUP`
+lesen, `https://<Host>:8443/` öffnen und ein Passwort wählen. Alle Einzelheiten, der
+Betrieb hinter einem Reverse Proxy und der macvlan-Haken stehen in
+**[docs/WEB-INTERFACE.de.md](docs/WEB-INTERFACE.de.md)**.
+Wie man eine neue Control-Firmware gegen die Messwert-Schlüssel prüft: **[docs/NEW-FIRMWARE.de.md](docs/NEW-FIRMWARE.de.md)**.
+
 ## Was er nicht kann
 
 **MQTT wird nicht bedient, und kann es auch nicht.** Das Gerät hält eine
@@ -342,6 +367,12 @@ seltener aus als eine im WAN.
 | `LOG_DIR` | `/data` | eine JSONL-Datei pro Tag |
 | `CERT_DIR` | `/certs` | Zertifikat und Schlüssel |
 | `MAX_BODY` | `262144` | Bytes, die pro Anfrage aufgehoben werden |
+| `WEB_PORT` | `8443` | Port der [Weboberfläche](docs/WEB-INTERFACE.de.md) |
+| `WEB_TLS` | `1` | `0` liefert die Oberfläche als reines HTTP, für den Betrieb hinter einem Proxy |
+| `BASE_PATH` | — | Oberfläche unter einem Pfad bereitstellen, z. B. `/endpoint` |
+| `TRUST_PROXY` | — | Proxys, deren `X-Forwarded-*`-Header geglaubt werden, z. B. `172.18.0.0/16` |
+| `PING` | `1` | `0` schaltet Geräte-Ping und Gateway-Prüfung ab |
+| `ENDPOINT_GATEWAY` | — | Adresse für die Netzprüfung statt des Gateways der Geräte |
 | `PROXY_TIME_IP` | — | Diagnose: Zeitabfrage weiterreichen und die echte Antwort wörtlich zurückgeben |
 | `PROXY_TIME_HOST` | `eu.hamedata.com` | Host-Kopfzeile beim Durchreichen |
 | `PROXY_TIME_PORT` | `80` | Port der Gegenstelle |

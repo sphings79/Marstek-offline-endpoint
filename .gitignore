@@ -2,3 +2,4 @@ data/
 certs/
 node_modules/
 .DS_Store
+SIGNATURSCHLUESSEL.md
