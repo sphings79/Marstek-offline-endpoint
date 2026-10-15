@@ -7,7 +7,7 @@
 set -e
 HOST="$1"; DATA="$2"
 [ -n "$HOST" ] && [ -n "$DATA" ] || { echo "usage: $0 user@host /host/path/to/data"; exit 2; }
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../src"
 VER=$(node -e "console.log(require('./web-version.json').version)")
 DIR="$DATA/web-override/$VER"
 FILES="web.cjs auth.cjs devices.cjs history.cjs updates.cjs ping.cjs db.cjs keydefs.cjs notify.cjs mqtt.cjs support.cjs store.cjs logbuf.cjs uptime-history.cjs webupdate.cjs web-version.json"

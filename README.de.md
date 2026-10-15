@@ -212,9 +212,9 @@ Versatz mitzudenken.
 Alles, was das Gerät hochlädt, landet in `data/requests-YYYY-MM-DD.jsonl`:
 
 ```bash
-./decode.py            # neuester Upload, dekodiert
-./decode.py --raw      # samt der Schlüssel, die noch niemand zugeordnet hat
-./decode.py --all      # jeder Upload in der Datei
+tools/decode.py            # neuester Upload, dekodiert
+tools/decode.py --raw      # samt der Schlüssel, die noch niemand zugeordnet hat
+tools/decode.py --all      # jeder Upload in der Datei
 ```
 
 Eine Bedeutung bekommt nur, was gegen eine zweite Quelle bestätigt wurde — dasselbe

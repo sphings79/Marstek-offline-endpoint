@@ -16,9 +16,10 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const { tarEntry, tarEnd } = require('../support.cjs');
+const { tarEntry, tarEnd } = require('../src/support.cjs');
 
-const ROOT = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '..'); // the project; the code is in src/
+const SRC = path.join(ROOT, 'src');
 const IPC_VERSION = 1;
 // everything the web process loads from its code root; webproc.cjs, server.cjs, supervisor.cjs and uptime.cjs stay in the image
 const MODULES = ['web.cjs', 'auth.cjs', 'devices.cjs', 'history.cjs', 'updates.cjs', 'ping.cjs', 'db.cjs', 'keydefs.cjs', 'notify.cjs', 'mqtt.cjs', 'support.cjs', 'store.cjs', 'logbuf.cjs', 'uptime-history.cjs', 'webupdate.cjs', 'web-version.json'];
@@ -28,15 +29,15 @@ const keyFile = arg('key');
 const out = path.resolve(arg('out', path.join(ROOT, 'dist')));
 if (!keyFile) { console.error('usage: make-web-bundle.cjs --key <private key file> [--out dir]'); process.exit(2); }
 
-const info = JSON.parse(fs.readFileSync(path.join(ROOT, 'web-version.json'), 'utf8'));
+const info = JSON.parse(fs.readFileSync(path.join(SRC, 'web-version.json'), 'utf8'));
 if (arg('version')) info.version = arg('version'); // for tests; a release takes it from web-version.json
 if (arg('min-container')) info.minContainer = arg('min-container');
 if (!/^\d+\.\d+\.\d+$/.test(info.version)) { console.error('web-version.json: "version" must look like 1.2.3'); process.exit(2); }
 const files = [...MODULES];
-for (const f of fs.readdirSync(path.join(ROOT, 'web')).sort()) if (fs.statSync(path.join(ROOT, 'web', f)).isFile()) files.push(`web/${f}`);
+for (const f of fs.readdirSync(path.join(SRC, 'web')).sort()) if (fs.statSync(path.join(SRC, 'web', f)).isFile()) files.push(`web/${f}`);
 
 const now = Date.now();
-const parts = files.map((f) => tarEntry(f, fs.readFileSync(path.join(ROOT, f)), now));
+const parts = files.map((f) => tarEntry(f, fs.readFileSync(path.join(SRC, f)), now));
 const tar = zlib.gzipSync(Buffer.concat([...parts, tarEnd()]), { level: 9 });
 const base = `marstek-endpoint-web-${info.version}`;
 const manifest = Buffer.from(JSON.stringify({

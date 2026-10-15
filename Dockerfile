@@ -9,8 +9,7 @@ FROM alpine:3.22
 RUN apk add --no-cache nodejs openssl tzdata
 
 WORKDIR /app
-COPY server.cjs web.cjs auth.cjs devices.cjs history.cjs updates.cjs ping.cjs uptime.cjs db.cjs keydefs.cjs notify.cjs mqtt.cjs support.cjs logbuf.cjs store.cjs uptime-history.cjs webupdate.cjs supervisor.cjs webproc.cjs web-version.json webupdate.pub /app/
-COPY web /app/web
+COPY src/ /app/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 

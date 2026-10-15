@@ -11,10 +11,10 @@ code (fw), see the comment behind each entry and keydefs.cjs. A few stay unmappe
 positions of ms that the firmware sets to a constant.
 
 Usage:
-    ./decode.py                      # newest entry of today's log
-    ./decode.py --all                # every POST in the newest file
-    ./decode.py --file data/requests-2026-08-25.jsonl
-    ./decode.py --raw                # also print keys we have no meaning for
+    tools/decode.py                      # newest entry of today's log
+    tools/decode.py --all                # every POST in the newest file
+    tools/decode.py --file data/requests-2026-08-25.jsonl
+    tools/decode.py --raw                # also print keys we have no meaning for
 """
 
 import argparse
@@ -296,7 +296,7 @@ def main() -> int:
     path = args.file
     if not path:
         here = os.path.dirname(os.path.abspath(__file__))
-        candidates = sorted(glob.glob(os.path.join(here, "data", "requests-*.jsonl")))
+        candidates = sorted(glob.glob(os.path.join(here, "..", "data", "requests-*.jsonl")) or glob.glob(os.path.join(os.getcwd(), "data", "requests-*.jsonl")))
         if not candidates:
             print("no data/requests-*.jsonl found — pass --file", file=sys.stderr)
             return 1

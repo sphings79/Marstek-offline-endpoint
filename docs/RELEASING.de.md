@@ -14,9 +14,9 @@ Leute lesen, schreib sie also für den Besitzer eines Endpoints.
 
 ## Ein Web-Release
 
-1. Code ändern. `version` in `web-version.json` erhöhen (und `minContainer`, wenn die neue Web-Seite etwas braucht, das erst ein
+1. Code ändern. `version` in `src/web-version.json` erhöhen (und `minContainer`, wenn die neue Web-Seite etwas braucht, das erst ein
    neueres Image liefert, zum Beispiel ein neues Feld in der Verständigung zwischen den beiden Prozessen; ändert sich die
-   Verständigung selbst, müssen auch `IPC_VERSION` in `supervisor.cjs`, `webproc.cjs` und `tools/make-web-bundle.cjs` wechseln, was
+   Verständigung selbst, müssen auch `IPC_VERSION` in `src/supervisor.cjs`, `src/webproc.cjs` und `tools/make-web-bundle.cjs` wechseln, was
    ein neues Image und ein Release beider Arten braucht).
 2. Die drei Dateien bauen und signieren:
 
@@ -32,7 +32,7 @@ Leute lesen, schreib sie also für den Besitzer eines Endpoints.
    ```
 
    Nicht als Vorabversion oder Entwurf markieren: Der Endpoint ignoriert beides.
-4. Das nächste Image sollte dieselbe Web-Version tragen (das Dockerfile kopiert die Dateien und `web-version.json`); ein
+4. Das nächste Image sollte dieselbe Web-Version tragen (das Dockerfile kopiert die Dateien und `src/web-version.json`); ein
    installiertes Update, das nicht neuer ist als die Dateien des Images, wird ignoriert.
 
 ## Vor dem ersten Release: noch nicht gegen echte Dienste getestet
@@ -48,22 +48,22 @@ Alles Folgende wurde nur gegen Mock-Server oder gar nicht getestet. Jeden Punkt 
 - [ ] Ein Web-Update aus einem echten signierten Release installieren: `web-vX.Y.Z` veröffentlichen, *Installieren* drücken, die neue
       Web-Version und den Rückweg prüfen und prüfen, dass eine veränderte Datei abgelehnt wird. Vorher den Signaturschlüssel sichern
 - [ ] Die Update-Prüfung gegen echte Releases: die Zeilen für Container und Web auf den Update-Karten und ihre Benachrichtigungen
-- [ ] `APP_VERSION`: jetzt ein Build-Argument in Dockerfile und Image-Workflow (`vX.Y.Z` bei einem Tag, `dev+<Commit>` bei main); beim ersten Workflow-Lauf prüfen, dass die Seite die Version zeigt
+- [x] `APP_VERSION`: jetzt ein Build-Argument in Dockerfile und Image-Workflow (`vX.Y.Z` bei einem Tag, `dev+<Commit>` bei main) (getestet mit dem v2.0.0-Image, 2026-10-16)
 - [x] Die Screenshots in der Doku zeigen Version 2.0.0 (aufgenommen am 2026-10-16)
 
 ## Der Signaturschlüssel
 
-Der Endpoint installiert ein Web-Update nur, wenn die Ed25519-Signatur des Manifests mit `webupdate.pub` stimmt, das Teil des
+Der Endpoint installiert ein Web-Update nur, wenn die Ed25519-Signatur des Manifests mit `src/webupdate.pub` stimmt, das Teil des
 Images ist. Der **private Schlüssel gehört nicht ins Repository** und darf dort nicht liegen: Bewahre ihn dort auf, wo nur du ihn
 lesen kannst (`~/.config/marstek-endpoint/web-signing.key`, Rechte 600), und sichere ihn. Ohne ihn lässt sich kein Web-Release
-machen; mit ihm kann jeder eines machen. Geht er verloren oder gelangt er nach außen, ein neues Paar erzeugen, `webupdate.pub`
+machen; mit ihm kann jeder eines machen. Geht er verloren oder gelangt er nach außen, ein neues Paar erzeugen, `src/webupdate.pub`
 ersetzen, ein **neues Image** veröffentlichen und die Nutzer bitten, es zu holen: Ältere Images vertrauen weiter dem alten
 Schlüssel.
 
 ```bash
 node -e "const c=require('crypto'),fs=require('fs');const k=c.generateKeyPairSync('ed25519');
 fs.writeFileSync('web-signing.key',k.privateKey.export({type:'pkcs8',format:'pem'}),{mode:0o600});
-fs.writeFileSync('webupdate.pub',k.publicKey.export({type:'spki',format:'pem'}))"
+fs.writeFileSync('src/webupdate.pub',k.publicKey.export({type:'spki',format:'pem'}))"
 ```
 
 Der Signaturschlüssel und sein Pfad stehen in `SIGNATURSCHLUESSEL.md`; die Datei steht in `.gitignore` und bleibt aus dem öffentlichen Repository heraus.

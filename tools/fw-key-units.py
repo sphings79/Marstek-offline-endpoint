@@ -21,7 +21,7 @@ ap.add_argument("--folder", required=True)
 ap.add_argument("--traces", required=True)
 ap.add_argument("--registers", required=True)
 ap.add_argument("--column", required=True, help="column with the RAM pointers of this firmware, e.g. source_ptr_v151")
-ap.add_argument("--keydefs", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "keydefs.cjs"))
+ap.add_argument("--keydefs", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "keydefs.cjs"))
 a = ap.parse_args()
 T = json.load(open(os.path.join(a.traces, a.folder + ".json")))["slots"]
 N = {}

@@ -35,18 +35,18 @@ Python 3 and the standard library; nothing to install.
 4. **Judge each difference.** A different name in the same place of the record with the same neighbours is usually a rename.
    A different variable, a constant instead of a variable, another width or another number of list items is a change of meaning.
 5. **Carry it into the endpoint.**
-   - New key: add it to `SEED` in `keydefs.cjs` (`F(...)` for "read from the firmware"), with a description and the versions that
+   - New key: add it to `SEED` in `src/keydefs.cjs` (`F(...)` for "read from the firmware"), with a description and the versions that
      send it.
-   - Same key, other meaning on a model or firmware: add a row to `MODEL_SEED` in `keydefs.cjs`
+   - Same key, other meaning on a model or firmware: add a row to `MODEL_SEED` in `src/keydefs.cjs`
      (`[key, model, fw, name, unit, scale, category, fmt, evidence, description]`; `fw` `'*'` for all firmware of the model).
      Rows from the firmware code are not marked verified.
    - Keys a version no longer sends need no change.
-   - Update the comment at the top of `keydefs.cjs`, then a web release (see `RELEASING.md`): `keydefs.cjs` is part of the web
+   - Update the comment at the top of `src/keydefs.cjs`, then a web release (see `RELEASING.md`): `src/keydefs.cjs` is part of the web
      bundle, so no new image is needed.
 6. **Check unit and scale against Modbus.** The upload code gives the meaning, the register map gives the unit. Every upload
    argument is a copy of a firmware variable, and the Modbus descriptor table of the same firmware says which register serves
    that variable, with which scale and unit. `tools/fw-key-units.py` joins the two by the variable's RAM address and compares the
-   result with `keydefs.cjs`:
+   result with `src/keydefs.cjs`:
 
    ```bash
    python3 tools/fw-key-sources.py --root <Dekompilate folder> --json traces
@@ -54,7 +54,7 @@ Python 3 and the standard library; nothing to install.
        --registers <VNSD_Register_Map_Final_generated.csv> --column source_ptr_v151
    ```
 
-   `OK` means the register map agrees with `keydefs.cjs`, `DIFF` means it does not (fix `keydefs.cjs` or look at the register).
+   `OK` means the register map agrees with `src/keydefs.cjs`, `DIFF` means it does not (fix `src/keydefs.cjs` or look at the register).
    `NOREG` means no register serves the variable (cell statistics, CT power, MPPT income, internal states): unit and scale then
    rest on the upload code and on the check in step 7. `NOVAR` means the argument is computed from several variables; read the
    formatter code by hand (the PV power is such a case: the firmware sends the 0.1 W register value, or 0 below 101).

@@ -37,18 +37,18 @@ Python 3 mit der Standardbibliothek; nichts zu installieren.
    Umbenennung. Eine andere Variable, eine Konstante statt einer Variable, eine andere Breite oder eine andere Anzahl
    Listenelemente ist eine geänderte Bedeutung.
 5. **Im Endpoint nachziehen.**
-   - Neuer Schlüssel: in `SEED` in `keydefs.cjs` ergänzen (`F(...)` für „aus der Firmware gelesen"), mit Beschreibung und den
+   - Neuer Schlüssel: in `SEED` in `src/keydefs.cjs` ergänzen (`F(...)` für „aus der Firmware gelesen"), mit Beschreibung und den
      Versionen, die ihn senden.
-   - Gleicher Schlüssel, andere Bedeutung bei einem Modell oder einer Firmware: eine Zeile in `MODEL_SEED` in `keydefs.cjs`
+   - Gleicher Schlüssel, andere Bedeutung bei einem Modell oder einer Firmware: eine Zeile in `MODEL_SEED` in `src/keydefs.cjs`
      (`[key, model, fw, name, unit, scale, category, fmt, evidence, description]`; `fw` `'*'` für alle Firmware des Modells).
      Zeilen aus dem Firmware-Code gelten nicht als geprüft.
    - Schlüssel, die eine Version nicht mehr sendet, brauchen keine Änderung.
-   - Den Kommentar oben in `keydefs.cjs` anpassen, dann ein Web-Release (siehe `RELEASING.de.md`): `keydefs.cjs` gehört zum
+   - Den Kommentar oben in `src/keydefs.cjs` anpassen, dann ein Web-Release (siehe `RELEASING.de.md`): `src/keydefs.cjs` gehört zum
      Web-Bündel, ein neues Image ist nicht nötig.
 6. **Einheit und Skalierung gegen Modbus prüfen.** Der Upload-Code liefert die Bedeutung, die Registerkarte die Einheit. Jedes
    Upload-Argument ist eine Kopie einer Firmware-Variable, und die Modbus-Deskriptortabelle derselben Firmware sagt, welches
    Register diese Variable ausliefert, mit welcher Skalierung und Einheit. `tools/fw-key-units.py` verbindet beides über die
-   RAM-Adresse der Variable und vergleicht mit `keydefs.cjs`:
+   RAM-Adresse der Variable und vergleicht mit `src/keydefs.cjs`:
 
    ```bash
    python3 tools/fw-key-sources.py --root <Dekompilate-Ordner> --json traces
@@ -56,7 +56,7 @@ Python 3 mit der Standardbibliothek; nichts zu installieren.
        --registers <VNSD_Register_Map_Final_generated.csv> --column source_ptr_v151
    ```
 
-   `OK` heißt: Die Registerkarte stimmt mit `keydefs.cjs` überein. `DIFF` heißt: nicht (`keydefs.cjs` korrigieren oder das
+   `OK` heißt: Die Registerkarte stimmt mit `src/keydefs.cjs` überein. `DIFF` heißt: nicht (`src/keydefs.cjs` korrigieren oder das
    Register ansehen). `NOREG` heißt: Kein Register liefert die Variable aus (Zellstatistik, CT-Leistung, MPPT-Ertrag, interne
    Zustände); Einheit und Skalierung beruhen dann auf dem Upload-Code und der Prüfung in Schritt 7. `NOVAR` heißt: Das Argument
    wird aus mehreren Variablen berechnet; den Formatter-Code von Hand lesen (die PV-Leistung ist so ein Fall: Die Firmware sendet

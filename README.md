@@ -203,9 +203,9 @@ for the offset.
 Everything the device uploads lands in `data/requests-YYYY-MM-DD.jsonl`:
 
 ```bash
-./decode.py            # newest upload, decoded
-./decode.py --raw      # including the keys nobody has identified yet
-./decode.py --all      # every upload in the file
+tools/decode.py            # newest upload, decoded
+tools/decode.py --raw      # including the keys nobody has identified yet
+tools/decode.py --all      # every upload in the file
 ```
 
 Only fields confirmed against a second source — the same device read over Modbus

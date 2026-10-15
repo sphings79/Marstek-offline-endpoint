@@ -2,7 +2,7 @@
 /**
  * What the keys of the telemetry upload mean. Two kinds of evidence, kept apart in `evidence`:
  *   ha  compared against Home Assistant (Modbus) on three Venus D running control firmware 151:
- *       exact counters, exact steps (see decode.py)
+ *       exact counters, exact steps (see tools/decode.py)
  *   fw  read from the firmware code (VNSD Control 151): the upload is one sprintf; every argument
  *       is a copy of a named live variable. That gives the meaning, not always the unit.
  * Where the firmware gave a meaning but no unit, scale is 1 and the unit is empty: a later edit
