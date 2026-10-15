@@ -223,12 +223,21 @@ function kongHeaders() {
  *
  *  So: hold the connection well past the device's own timeout, then end it
  *  cleanly. Never destroy() it.
+ *
+ *  The socket is taken from req, not res. A raw write means Node never sees
+ *  the response finish, so on a reused connection (a reverse proxy pools them)
+ *  res.socket is null for every later request, and the timer would otherwise
+ *  close the connection underneath a request that arrived in the meantime.
+ *  Hence one timer per socket, restarted with each reply.
  */
-function sendRaw(res, buf) {
-  res.socket.write(buf);
+const reapTimers = new WeakMap();
+
+function sendRaw(socket, buf) {
+  socket.write(buf);
   // 25 s: past the firmware's 20 s receive timeout, so the shutdown can never
   // land mid-read. end() is a clean close (close_notify on TLS), not destroy().
-  setTimeout(() => res.socket && !res.socket.destroyed && res.socket.end(), 25000);
+  clearTimeout(reapTimers.get(socket));
+  reapTimers.set(socket, setTimeout(() => !socket.destroyed && socket.end(), 25000));
 }
 
 /** Fetch the time endpoint upstream over plain HTTP and hand back the raw
@@ -443,16 +452,13 @@ function handle(scheme) {
             // Verbatim, straight onto the socket. Going through res.writeHead
             // and res.end would let Node re-frame the reply, which is exactly
             // the detail this mode exists to preserve.
-            res.socket.write(raw);
             // The real endpoint answers keep-alive and leaves the connection
-            // up, so do the same rather than closing early -- but do not leak
-            // the socket either.
-            setTimeout(() => res.socket && res.socket.destroy(), 6000);
+            // up; sendRaw() does the same and reaps the socket later.
+            sendRaw(req.socket, raw);
           } else {
             // Upstream unreachable. Answer locally rather than leave the device
             // waiting out its 20 s timeout.
-            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            res.end(timeResponse());
+            sendRaw(req.socket, rawReply('text/html; charset=utf-8', timeResponse()));
           }
           logRequest({
             ts: new Date().toISOString(),
@@ -475,7 +481,7 @@ function handle(scheme) {
 
       if (isTime) {
         // Byte-for-byte as the real endpoint answers -- see rawReply().
-        sendRaw(res, rawReply('text/html; charset=utf-8', timeResponse()));
+        sendRaw(req.socket, rawReply('text/html; charset=utf-8', timeResponse()));
       } else if (accept) {
         // "code":0 is what FUN_0801774c looks for. The shape mirrors the real
         // endpoint, which answers e.g. {"code":51,"message":"...","data":null}
@@ -490,7 +496,7 @@ function handle(scheme) {
         // mbedTLS_SSL_Recv_WithRetry (0x08015914), whose only early exit is a
         // close_notify from us -- see sendRaw().
         sendRaw(
-          res,
+          req.socket,
           rawReply(
             'application/json',
             '{"code":0,"message":"success","data":null}',
@@ -500,8 +506,20 @@ function handle(scheme) {
       } else {
         // Headers alone already end with CRLF CRLF, so the receive loop is
         // satisfied without a body.
-        res.writeHead(404, { 'Content-Length': 0 });
-        res.end();
+        //
+        // Raw as well: after a raw reply on the same connection res.writeHead/
+        // res.end would wait forever for a response Node never sees finish.
+        sendRaw(
+          req.socket,
+          Buffer.from(
+            'HTTP/1.1 404 Not Found\r\n' +
+              'Content-Length: 0\r\n' +
+              `Date: ${new Date().toUTCString()}\r\n` +
+              'Connection: keep-alive\r\n' +
+              '\r\n',
+            'latin1'
+          )
+        );
       }
     });
   };
