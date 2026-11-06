@@ -392,6 +392,45 @@ schaltet sich dann selbst ab (das Log nennt den Grund), und die Update-Abfrage
 ginge über das Proxy-Netz hinaus. Bei älterem Docker darauf achten, dass das
 LAN-Netz zuerst sortiert, oder `ENDPOINT_GATEWAY` setzen.
 
+#### Alternative: ein macvlan-Interface auf dem Host
+
+Statt des zweiten Netzes kannst du dem Host selbst einen Fuß ins macvlan geben.
+Such dir eine freie Adresse im Subnetz für den Host aus (hier `192.168.1.222`),
+die **nicht** im `ip_range` des Docker-Netzes liegt, und reserviere sie mit
+`aux_addresses`, damit Docker sie nie vergibt:
+
+```yaml
+networks:
+  endpoint_lan:
+    driver: macvlan
+    driver_opts:
+      parent: eth0
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
+          gateway: 192.168.1.1
+          ip_range: 192.168.1.231/32
+          aux_addresses:
+            host: 192.168.1.222
+```
+
+Dann legst du auf dem Host ein macvlan-Interface an und routest den
+Container-Bereich darüber:
+
+```bash
+ip link add vlan-host link eth0 type macvlan mode bridge
+ip addr add 192.168.1.222/32 dev vlan-host
+ip link set vlan-host up
+ip route add 192.168.1.231/32 dev vlan-host
+```
+
+Der Host, und damit der Proxy darauf, erreicht den Endpoint jetzt direkt, und der
+Endpoint erreicht den Host unter `192.168.1.222`. Der Proxy braucht dann kein
+zweites Netz, und `TRUST_PROXY` ist die Adresse des Hosts statt eines
+Docker-Subnetzes. Diese `ip`-Befehle überleben keinen Neustart: Trag sie in deine
+Netzwerkkonfiguration (systemd-networkd, netplan) oder ein Boot-Skript ein. Danke
+an [@schauveau](https://github.com/schauveau) für die Idee.
+
 Traefik als Datei-Route (das selbstsignierte Zertifikat der Oberfläche wird auf
 dem Weg innerhalb des Hosts akzeptiert; `lan-only` steht für eine Erlaubnisliste
 deiner eigenen Netze):

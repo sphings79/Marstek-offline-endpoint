@@ -375,6 +375,45 @@ network check then switches itself off (the log says why), and the update check
 would go out through the proxy network. On an older Docker make sure the LAN
 network sorts first, or set `ENDPOINT_GATEWAY`.
 
+#### Alternative: a macvlan interface on the host
+
+Instead of the second network you can give the host itself a foot in the
+macvlan. Pick a free address in your subnet for the host (here `192.168.1.222`)
+that is **not** in the `ip_range` of the Docker network, and reserve it with
+`aux_addresses` so Docker never hands it out:
+
+```yaml
+networks:
+  endpoint_lan:
+    driver: macvlan
+    driver_opts:
+      parent: eth0
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
+          gateway: 192.168.1.1
+          ip_range: 192.168.1.231/32
+          aux_addresses:
+            host: 192.168.1.222
+```
+
+Then create a macvlan interface on the host and route the container range
+through it:
+
+```bash
+ip link add vlan-host link eth0 type macvlan mode bridge
+ip addr add 192.168.1.222/32 dev vlan-host
+ip link set vlan-host up
+ip route add 192.168.1.231/32 dev vlan-host
+```
+
+The host, and so the proxy on it, now reaches the endpoint directly, and the
+endpoint reaches the host at `192.168.1.222`. The proxy then needs no second
+network, and `TRUST_PROXY` is the host's address instead of a Docker subnet.
+These `ip` commands do not survive a reboot: put them into your network
+configuration (systemd-networkd, netplan) or a boot script. Thanks to
+[@schauveau](https://github.com/schauveau) for the idea.
+
 Traefik, as a file route (the self-signed certificate of the interface is
 accepted on the hop inside the host; `lan-only` stands for an allow-list of your
 own networks):
