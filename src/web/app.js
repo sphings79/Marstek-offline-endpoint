@@ -934,7 +934,8 @@
   }
 
   function supportModal(d) {
-    const form = supportForm([], d.uid);
+    // the select needs the device as an option, otherwise the preset is dropped and an empty id is sent
+    const form = supportForm([d], d.uid);
     const msg = h('div', {});
     modal(t('support.forDevice'), [msg, form.node], (close) => {
       const btn = h('button', { class: 'btn', type: 'button', text: t('support.download'), on: { click: () => downloadSupport(form.options(), btn, msg) } });
